@@ -33,18 +33,20 @@ void command_add(int argc, char** argv) {
         args.vaults_path.has_value() ? std::filesystem::path {*args.vaults_path} : get_default_vaults_path();
     const std::filesystem::path vault_path = vaults_path / vault_name;
 
+    const std::string password = read_password();
+
     Vault vault {};
-    load_vault(vault, vault_path);
+    load_vault(vault, vault_path, password);
 
     Vault::Entry entry {};
 
     for (const auto& field : vault.fields) {
         std::cout << field.name << ": " << std::flush;
-        std::string field_value = field.hidden ? get_password() : get_text();
+        std::string field_value = field.hidden ? get_hidden_text() : get_text();
         entry.values.push_back(std::move(field_value));
     }
 
     vault.entries.push_back(std::move(entry));
 
-    save_vault(vault, vault_path);
+    save_vault(vault, vault_path, password);
 }

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 
-std::string get_password();
+std::string get_hidden_text();
 std::string get_text();
 
 uint64_t get_number();

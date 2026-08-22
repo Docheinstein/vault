@@ -35,8 +35,10 @@ void command_remove(int argc, char** argv) {
 
     const uint32_t id = args.id.has_value() ? args.id.value() : read_id();
 
+    const std::string password = read_password();
+
     Vault vault {};
-    load_vault(vault, vault_path);
+    load_vault(vault, vault_path, password);
 
     const uint32_t entry_index = entry_id_to_index(vault, id);
 
@@ -44,5 +46,5 @@ void command_remove(int argc, char** argv) {
 
     vault.entries.erase(it);
 
-    save_vault(vault, vault_path);
+    save_vault(vault, vault_path, password);
 }

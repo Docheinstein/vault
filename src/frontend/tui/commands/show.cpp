@@ -34,8 +34,10 @@ void command_show(int argc, char** argv) {
         args.vaults_path.has_value() ? std::filesystem::path {*args.vaults_path} : get_default_vaults_path();
     const std::filesystem::path vault_path = vaults_path / vault_name;
 
+    const std::string password = read_password();
+
     Vault vault {};
-    load_vault(vault, vault_path);
+    load_vault(vault, vault_path, password);
 
     print_fields(vault);
     print_entries(vault, build_entries(vault));

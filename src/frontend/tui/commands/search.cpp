@@ -43,11 +43,13 @@ void command_search(int argc, char** argv) {
     const std::filesystem::path vault_path = vaults_path / vault_name;
 
     const std::string search_pattern =
-        args.search_pattern ? *args.search_pattern : read_with_prompt("Search pattern: ");
+        args.search_pattern ? *args.search_pattern : read_text_with_prompt("Search pattern: ");
     const std::string search_pattern_lower = string_to_lower(search_pattern);
 
+    const std::string password = read_password();
+
     Vault vault {};
-    load_vault(vault, vault_path);
+    load_vault(vault, vault_path, password);
 
     print_fields(vault);
 

@@ -5,8 +5,8 @@
 
 #include "vault/vault/vault.h"
 
-void load_vault(Vault& vault, const std::filesystem::path& vault_path);
-void save_vault(const Vault& vault, const std::filesystem::path& vault_path);
+void load_vault(Vault& vault, const std::filesystem::path& vault_path, const std::string& password);
+void save_vault(const Vault& vault, const std::filesystem::path& vault_path, const std::string& password);
 
 uint32_t entry_id_to_index(const Vault& vault, uint32_t id);
 uint32_t field_number_to_index(const Vault& vault, uint32_t id);

@@ -38,8 +38,10 @@ void command_update(int argc, char** argv) {
 
     const uint64_t id = args.id.has_value() ? args.id.value() : read_id();
 
+    const std::string password = read_password();
+
     Vault vault {};
-    load_vault(vault, vault_path);
+    load_vault(vault, vault_path, password);
 
     const uint64_t entry_index = entry_id_to_index(vault, id);
 
@@ -58,9 +60,9 @@ void command_update(int argc, char** argv) {
     check_field_index_for_entry(vault, entry, field_index);
 
     std::cout << vault.fields[field_index].name << ": " << std::flush;
-    std::string new_value = vault.fields[field_index].hidden ? get_password() : get_text();
+    std::string new_value = vault.fields[field_index].hidden ? get_hidden_text() : get_text();
 
     entry.values[field_index] = std::move(new_value);
 
-    save_vault(vault, vault_path);
+    save_vault(vault, vault_path, password);
 }

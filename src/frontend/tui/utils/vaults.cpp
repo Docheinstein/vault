@@ -6,15 +6,15 @@
 
 #include "commands/exitcodes.h"
 
-void load_vault(Vault& vault, const std::filesystem::path& vault_path) {
-    if (!vault.load(vault_path.string())) {
+void load_vault(Vault& vault, const std::filesystem::path& vault_path, const std::string& password) {
+    if (!vault.load(vault_path.string(), password)) {
         std::cerr << "ERROR: failed to open vault '" << vault_path.filename() << "'" << std::endl;
         exit(EXIT_IO_ERROR);
     }
 }
 
-void save_vault(const Vault& vault, const std::filesystem::path& vault_path) {
-    const bool ok = vault.save(vault_path.string());
+void save_vault(const Vault& vault, const std::filesystem::path& vault_path, const std::string& password) {
+    const bool ok = vault.save(vault_path.string(), password);
     if (!ok) {
         std::cerr << "ERROR: failed to save vault '" << vault_path.filename() << "'" << std::endl;
         exit(EXIT_IO_ERROR);

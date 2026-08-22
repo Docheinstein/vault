@@ -6,7 +6,7 @@
 #include "vault/fs/fileio.h"
 
 #ifdef DEBUG_STORE_PLAINTEXT
-bool Vault::save(const std::string& path) const {
+bool Vault::save(const std::string& path, const std::string& password) const {
     const std::string vault_json = to_json();
     const char* const vault_json_str = vault_json.c_str();
 
@@ -14,11 +14,13 @@ bool Vault::save(const std::string& path) const {
     return result.has_value();
 }
 #else
-bool Vault::save(const std::string& path) const {
+bool Vault::save(const std::string& path, const std::string& password) const {
     const std::string vault_json = to_json();
     const char* const vault_json_str = vault_json.c_str();
 
-    const encrypt_result encrypt_result = encrypt(vault_json_str, "TODO");
+    const char* const password_str = password.c_str();
+
+    const encrypt_result encrypt_result = encrypt(vault_json_str, password_str);
     if (!encrypt_result) {
         return false;
     }
@@ -29,7 +31,7 @@ bool Vault::save(const std::string& path) const {
 #endif
 
 #ifdef DEBUG_STORE_PLAINTEXT
-bool Vault::load(const std::string& path) {
+bool Vault::load(const std::string& path, const std::string& password) {
     const auto result = read_file(path);
     if (!result.has_value()) {
         return false;
@@ -42,13 +44,15 @@ bool Vault::load(const std::string& path) {
 }
 #else
 
-bool Vault::load(const std::string& path) {
+bool Vault::load(const std::string& path, const std::string& password) {
     const read_file_result read_result = read_file(path);
     if (!read_result) {
         return false;
     }
 
-    const decrypt_result decrypt_result = decrypt(*read_result, "TODO");
+    const char* const password_str = password.c_str();
+
+    const decrypt_result decrypt_result = decrypt(*read_result, password_str);
     if (!decrypt_result) {
         return false;
     }

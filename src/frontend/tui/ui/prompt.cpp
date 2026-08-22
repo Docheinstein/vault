@@ -6,7 +6,7 @@
 
 #include "vault/utils/strings.h"
 
-std::string get_password() {
+std::string get_hidden_text() {
     // Cache current terminal settings.
     termios oldt {};
     tcgetattr(STDIN_FILENO, &oldt);
@@ -16,14 +16,14 @@ std::string get_password() {
     newt.c_lflag &= ~ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    std::string password {};
-    std::getline(std::cin, password);
+    std::string text {};
+    std::getline(std::cin, text);
 
     // Restore previous terminal settings.
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     std::cout << std::endl;
 
-    return password;
+    return text;
 }
 
 std::string get_text() {

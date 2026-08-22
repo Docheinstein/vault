@@ -56,7 +56,9 @@ void command_create(int argc, char** argv) {
         exit(EXIT_EXECUTION_FAILED);
     }
 
+    const std::string password = read_password();
+
     std::filesystem::create_directories(vaults_path);
 
-    save_vault(vault, vault_path);
+    save_vault(vault, vault_path, password);
 }
