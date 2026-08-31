@@ -14,4 +14,6 @@ std::string string_to_lower(std::string_view str);
 
 std::optional<uint64_t> strtou(const std::string& str, uint8_t base = 10);
 
+void rtrim(std::string& s);
+
 #endif

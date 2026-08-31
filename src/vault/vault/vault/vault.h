@@ -2,26 +2,11 @@
 #define VAULT_H
 
 #include <string>
-#include <vector>
 
-struct Vault {
-    bool save(const std::string& path, const std::string& password) const;
-    bool load(const std::string& path, const std::string& password);
+#include "vault/common/retcodes.h"
 
-    std::string to_json() const;
-    bool parse_json(const std::string& json);
+VaultReturnCode save_vault(const std::string& path, const std::string& password);
 
-    struct Field {
-        std::string name {};
-        bool hidden {};
-    };
-
-    struct Entry {
-        std::vector<std::string> values {};
-    };
-
-    std::vector<Field> fields {};
-    std::vector<Entry> entries {};
-};
+VaultReturnCode load_vault(const std::string& path, const std::string& password, unsigned char secret_key[32]);
 
 #endif // VAULT_H

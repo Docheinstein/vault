@@ -1,186 +1,218 @@
 #include "vault/vault/vault.h"
 
+#include "sodium.h"
+
 #include "simdjson.h"
 
-#include "vault/crypto/crypto.h"
 #include "vault/fs/fileio.h"
 
-#ifdef DEBUG_STORE_PLAINTEXT
-bool Vault::save(const std::string& path, const std::string& password) const {
-    const std::string vault_json = to_json();
-    const char* const vault_json_str = vault_json.c_str();
+/*
+ * Scheme of the header.
+ *
+ * +--------------------------------------------------+
+ * |                Header (128 bytes)                |
+ * |--------------------------------------------------|
+ * | Description                 |  Range  | # Bytes  |
+ * |--------------------------------------------------|
+ * | Magic Bytes                 |    0:3  |       4  |
+ * | Encryption Algorithm        |    4:4  |       1  |
+ * | Password Hash Algorithm     |    5:5  |       1  |
+ * | Unused                      |   6:31  |      26  |
+ * |--------------------------------------------------|
+ * | Encryption Data      (*1*)  |  32:79  |      48  |
+ * | Password Hash Data   (*2*)  | 80:127  |      48  |
+ * +--------------------------------------------------+
+ *
+ *
+ * +--------------------------------------------------+
+ * | (*1*)        Encryption Data (48 bytes)          |
+ * |--------------------------------------------------|
+ * | Description                 |  Range  | # Bytes  |
+ * |--------------------------------------------------|
+ * | Nonce                        |  0:23  |      24  |
+ * | Unused                       | 24:47  |      24  |
+ * +--------------------------------------------------+
+ *
+ * +--------------------------------------------------+
+ * | (*2*)      Password Hash Data (48 bytes)         |
+ * |--------------------------------------------------|
+ * | Description                 |  Range  | # Bytes  |
+ * |--------------------------------------------------|
+ * | Salt                        |   0:15  |      16  |
+ * | Memory Limit                |  16:23  |       8  |
+ * | Ops Limit                   |  24:24  |       1  |
+ * | Unused                      |  25:47  |      23  |
+ * +--------------------------------------------------+
+ *
+ */
 
-    const auto result = write_file(path, vault_json_str, vault_json.size());
-    return result.has_value();
+namespace {
+constexpr unsigned char ENCRYPTION_ALGO_SECRETBOX_EASY = 0;
+constexpr unsigned long long ENCRYPTION_SECRET_KEY_SIZE = crypto_secretbox_KEYBYTES;
+constexpr unsigned long long ENCRYPTION_MAC_SIZE = crypto_secretbox_MACBYTES;
+constexpr unsigned long long ENCRYPTION_NONCE_SIZE = crypto_secretbox_NONCEBYTES;
+constexpr unsigned char ENCRYPTION_ALGO = ENCRYPTION_ALGO_SECRETBOX_EASY;
+
+constexpr unsigned long long MAXIMUM_PLAINTEXT_LENGTH = 256 * (1 << 20);
+
+constexpr unsigned long long PWHASH_SALT_SIZE = crypto_pwhash_SALTBYTES;
+constexpr unsigned long long PWHASH_OPSLIMIT = crypto_pwhash_OPSLIMIT_INTERACTIVE;
+constexpr unsigned long long PWHASH_MEMLIMIT = crypto_pwhash_MEMLIMIT_INTERACTIVE;
+constexpr unsigned char PWHASH_ALGO = crypto_pwhash_ALG_ARGON2ID13;
+
+constexpr unsigned long long PWHASH_OPSLIMIT_SIZE = 1;
+constexpr unsigned long long PWHASH_MEMLIMIT_SIZE = 8;
+
+constexpr unsigned long long VAULT_MAGIC_BYTES_SIZE = 4;
+constexpr unsigned char VAULT_MAGIC_BYTES[VAULT_MAGIC_BYTES_SIZE] = "VLT";
+
+constexpr unsigned long long VAULT_HEADER_SIZE = 128;
+
+constexpr unsigned long long VAULT_HEADER_PROLOGUE_BEGIN_POS = 0;
+constexpr unsigned long long VAULT_HEADER_ENCRYPTION_BEGIN_POS = 16;
+constexpr unsigned long long VAULT_HEADER_PWHASH_BEGIN_POS = VAULT_HEADER_ENCRYPTION_BEGIN_POS + 48;
+
+constexpr unsigned long long VAULT_HEADER_PROLOGUE_MAGIC_BYTES_POS = VAULT_HEADER_PROLOGUE_BEGIN_POS;
+constexpr unsigned long long VAULT_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS =
+    VAULT_HEADER_PROLOGUE_MAGIC_BYTES_POS + VAULT_MAGIC_BYTES_SIZE;
+constexpr unsigned long long VAULT_HEADER_PROLOGUE_PWHASH_ALGO_POS = VAULT_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS + 1;
+
+constexpr unsigned long long VAULT_HEADER_ENCRYPTION_NONCE_POS = VAULT_HEADER_ENCRYPTION_BEGIN_POS;
+
+constexpr unsigned long long VAULT_HEADER_PWHASH_SALT_POS = VAULT_HEADER_PWHASH_BEGIN_POS;
+constexpr unsigned long long VAULT_HEADER_PWHASH_MEMLIMIT_POS = VAULT_HEADER_PWHASH_SALT_POS + PWHASH_SALT_SIZE;
+constexpr unsigned long long VAULT_HEADER_PWHASH_OPSLIMIT_POS = VAULT_HEADER_PWHASH_MEMLIMIT_POS + PWHASH_MEMLIMIT_SIZE;
+
+constexpr unsigned long long VAULT_CIPHERTEXT_POS = VAULT_HEADER_SIZE;
+
+constexpr unsigned long long MAXIMUM_PASSWORD_LENGTH = 128;
+
+void read_header_prologue(const unsigned char* const header, unsigned char* const magic,
+                          unsigned char* const pwhash_algo, unsigned char* const encryption_algo) {
+    memcpy(magic, header + VAULT_HEADER_PROLOGUE_MAGIC_BYTES_POS, VAULT_MAGIC_BYTES_SIZE);
+    *pwhash_algo = header[VAULT_HEADER_PROLOGUE_PWHASH_ALGO_POS];
+    *encryption_algo = header[VAULT_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS];
 }
-#else
-bool Vault::save(const std::string& path, const std::string& password) const {
-    const std::string vault_json = to_json();
-    const char* const vault_json_str = vault_json.c_str();
+} // namespace
 
-    const char* const password_str = password.c_str();
+VaultReturnCode save_vault(const std::string& path, const std::string& password) {
+    unsigned char pwhash_salt[PWHASH_SALT_SIZE];
+    unsigned char encryption_secret_key[ENCRYPTION_SECRET_KEY_SIZE];
+    unsigned char encryption_nonce[ENCRYPTION_NONCE_SIZE];
 
-    const encrypt_result encrypt_result = encrypt(vault_json_str, password_str);
-    if (!encrypt_result) {
-        return false;
+    // Check that password is safe.
+    const unsigned long long password_length = strnlen(password.c_str(), MAXIMUM_PASSWORD_LENGTH);
+    if (password_length >= MAXIMUM_PASSWORD_LENGTH) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    const auto result = write_file(path, encrypt_result->data(), encrypt_result->size());
-    return result.has_value();
-}
-#endif
+    // Generate random salt.
+    randombytes_buf(pwhash_salt, sizeof(pwhash_salt));
 
-#ifdef DEBUG_STORE_PLAINTEXT
-bool Vault::load(const std::string& path, const std::string& password) {
-    const auto result = read_file(path);
-    if (!result.has_value()) {
-        return false;
+    // Generate secret key from password (Argon2).
+    if (crypto_pwhash_argon2id(encryption_secret_key, sizeof(encryption_secret_key), password.c_str(), password_length,
+                               pwhash_salt, PWHASH_OPSLIMIT, PWHASH_MEMLIMIT, PWHASH_ALGO) != 0) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    const auto& content = result.value();
-    const std::string content_str {content.begin(), content.end()};
+    // Generate nonce for encryption.
+    randombytes_buf(encryption_nonce, sizeof(encryption_nonce));
 
-    return parse_json(content_str);
+    // Encrypt using secret key (ChaCha20Poly1035).
+    const unsigned long long ciphertext_length = ENCRYPTION_MAC_SIZE;
+
+    const unsigned long long output_length = VAULT_HEADER_SIZE + ciphertext_length;
+
+    std::vector<unsigned char> output {};
+    output.resize(output_length);
+
+    unsigned char* const ciphertext = output.data() + VAULT_HEADER_SIZE;
+    if (crypto_secretbox_easy(ciphertext, nullptr, 0, encryption_nonce, encryption_secret_key) != 0) {
+        return VAULT_GENERIC_ERROR;
+    }
+
+    unsigned char* const header = output.data();
+
+    // Prologue (32 bytes).
+    memset(header, 0, VAULT_HEADER_SIZE);
+    memcpy(header + VAULT_HEADER_PROLOGUE_MAGIC_BYTES_POS, VAULT_MAGIC_BYTES, VAULT_MAGIC_BYTES_SIZE);
+
+    header[VAULT_HEADER_PROLOGUE_PWHASH_ALGO_POS] = PWHASH_ALGO;
+    header[VAULT_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS] = ENCRYPTION_ALGO;
+
+    // Password Hash Data (48 bytes).
+    memcpy(header + VAULT_HEADER_PWHASH_SALT_POS, pwhash_salt, PWHASH_SALT_SIZE);
+    memcpy(header + VAULT_HEADER_PWHASH_MEMLIMIT_POS, &PWHASH_MEMLIMIT, 8);
+    header[VAULT_HEADER_PWHASH_OPSLIMIT_POS] = PWHASH_OPSLIMIT;
+
+    // Encryption Data (48 bytes).
+    memcpy(header + VAULT_HEADER_ENCRYPTION_NONCE_POS, encryption_nonce, ENCRYPTION_NONCE_SIZE);
+
+    const auto result = write_binary_file(path, output.data(), output.size());
+    if (!result) {
+        return VAULT_GENERIC_ERROR;
+    }
+
+    return VAULT_SUCCESS;
 }
-#else
 
-bool Vault::load(const std::string& path, const std::string& password) {
-    const read_file_result read_result = read_file(path);
+VaultReturnCode load_vault(const std::string& path, const std::string& password,
+                           unsigned char secret_key[ENCRYPTION_SECRET_KEY_SIZE]) {
+
+    const read_binary_file_result read_result = read_binary_file(path);
     if (!read_result) {
-        return false;
+        return VAULT_GENERIC_ERROR;
     }
 
-    const char* const password_str = password.c_str();
-
-    const decrypt_result decrypt_result = decrypt(*read_result, password_str);
-    if (!decrypt_result) {
-        return false;
+    if (read_result->size() < VAULT_HEADER_SIZE) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    const std::string result(decrypt_result->begin(), decrypt_result->end());
-
-    return parse_json(result);
-}
-#endif
-
-std::string Vault::to_json() const {
-    const auto num_fields = fields.size();
-    const auto num_entries = entries.size();
-
-    simdjson::builder::string_builder sb;
-    sb.start_object();
-
-    // Fields.
-    sb.escape_and_append_with_quotes("fields");
-    sb.append_colon();
-    sb.start_array();
-    for (uint32_t i = 0; i < num_fields; ++i) {
-        const auto& field = fields[i];
-        sb.start_object();
-        sb.append_key_value("name", field.name);
-        sb.append_comma();
-        sb.append_key_value("hidden", field.hidden);
-        sb.end_object();
-        if (i < num_fields - 1) {
-            sb.append_comma();
-        }
+    // Check that password is safe.
+    const unsigned long long password_length = strnlen(password.c_str(), MAXIMUM_PASSWORD_LENGTH);
+    if (password_length >= MAXIMUM_PASSWORD_LENGTH) {
+        return VAULT_GENERIC_ERROR;
     }
-    sb.end_array();
+    unsigned char magic[VAULT_MAGIC_BYTES_SIZE];
+    unsigned char pwhash_algo;
+    unsigned char encryption_algo;
 
-    sb.append_comma();
+    const unsigned char* data = read_result->data();
 
-    // Entries.
-    sb.escape_and_append_with_quotes("entries");
-    sb.append_colon();
-    sb.start_array();
-    for (uint32_t entry_idx = 0; entry_idx < num_entries; ++entry_idx) {
-        const auto& entry = entries[entry_idx];
-        const auto num_values = entry.values.size();
-        sb.start_array();
-        for (uint32_t value_idx = 0; value_idx < num_values; ++value_idx) {
-            const auto& value = entry.values[value_idx];
-            sb.append(value);
-            if (value_idx < num_values - 1) {
-                sb.append_comma();
-            }
-        }
-        sb.end_array();
-        if (entry_idx < num_entries - 1) {
-            sb.append_comma();
-        }
+    read_header_prologue(data, magic, &pwhash_algo, &encryption_algo);
+
+    if (memcmp(magic, VAULT_MAGIC_BYTES, VAULT_MAGIC_BYTES_SIZE) != 0) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    sb.end_array();
-    sb.end_object();
+    const unsigned char* const salt = data + VAULT_HEADER_PWHASH_SALT_POS;
+    const unsigned char* const nonce = data + VAULT_HEADER_ENCRYPTION_NONCE_POS;
 
-    return std::string {sb};
-}
+    const unsigned char* const memlimit = data + VAULT_HEADER_PWHASH_MEMLIMIT_POS;
+    const unsigned char* const opslimit = data + VAULT_HEADER_PWHASH_OPSLIMIT_POS;
+    const unsigned char* const ciphertext = data + VAULT_CIPHERTEXT_POS;
 
-bool Vault::parse_json(const std::string& json) {
-#define SIMDJSON_ENSURE_SUCCESS(x)                                                                                     \
-    if (x.error() != simdjson::SUCCESS) {                                                                              \
-        std::cerr << "JSON error: failed to parse: " << #x << std::endl;                                               \
-        return false;                                                                                                  \
+    unsigned long long opslimit_val {};
+    memcpy(&opslimit_val, opslimit, PWHASH_OPSLIMIT_SIZE);
+
+    unsigned long long memlimit_val {};
+    memcpy(&memlimit_val, memlimit, PWHASH_MEMLIMIT_SIZE);
+
+    // Generate secret key from password.
+    if (crypto_pwhash(secret_key, ENCRYPTION_SECRET_KEY_SIZE, password.c_str(), password_length, salt, opslimit_val,
+                      memlimit_val, pwhash_algo) != 0) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    simdjson::ondemand::parser parser;
-    simdjson::padded_string padded_json = json;
-    simdjson::ondemand::document doc = parser.iterate(padded_json);
-    simdjson::ondemand::object root = doc.get_object();
+    // Decrypt using secret key (ChaCha20Poly1035).
+    std::vector<unsigned char> output {};
 
-    auto fields_element = root.find_field("fields");
-    SIMDJSON_ENSURE_SUCCESS(fields_element);
+    const unsigned long long ciphertext_length = read_result->size() - VAULT_HEADER_SIZE;
+    output.resize(ciphertext_length - ENCRYPTION_MAC_SIZE);
 
-    auto fields_array = fields_element.get_array();
-    SIMDJSON_ENSURE_SUCCESS(fields_array);
-
-    for (auto field_element : fields_array) {
-        auto field_object = field_element.get_object();
-        SIMDJSON_ENSURE_SUCCESS(field_object);
-
-        Field field {};
-
-        auto field_name_element = field_object.find_field("name");
-        SIMDJSON_ENSURE_SUCCESS(field_name_element);
-
-        auto field_name_string = field_name_element.get_string();
-        SIMDJSON_ENSURE_SUCCESS(field_name_string);
-
-        field.name = field_name_string.value();
-
-        auto field_hidden_element = field_object.find_field("hidden");
-        SIMDJSON_ENSURE_SUCCESS(field_hidden_element);
-
-        auto field_hidden_bool = field_hidden_element.get_bool();
-        SIMDJSON_ENSURE_SUCCESS(field_hidden_bool);
-
-        field.hidden = field_hidden_bool.value();
-
-        fields.push_back(std::move(field));
+    if (crypto_secretbox_open_easy(output.data(), ciphertext, ciphertext_length, nonce, secret_key) != 0) {
+        return VAULT_GENERIC_ERROR;
     }
 
-    auto entries_element = root.find_field("entries");
-    SIMDJSON_ENSURE_SUCCESS(entries_element);
-
-    auto entries_array = entries_element.get_array();
-    SIMDJSON_ENSURE_SUCCESS(entries_array);
-
-    for (auto entry_element : entries_array) {
-        auto entry_values = entry_element.get_array();
-        SIMDJSON_ENSURE_SUCCESS(entry_values);
-
-        Entry entry {};
-
-        for (auto entry_value_element : entry_values) {
-            auto entry_value_string = entry_value_element.get_string();
-            SIMDJSON_ENSURE_SUCCESS(entry_value_string);
-
-            entry.values.emplace_back(entry_value_string.value());
-        }
-
-        entries.push_back(std::move(entry));
-    }
-
-#undef SIMDJSON_ENSURE_SUCCESS
-    return true;
+    return VAULT_SUCCESS;
 }

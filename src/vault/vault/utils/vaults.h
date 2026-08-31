@@ -3,6 +3,6 @@
 
 #include <filesystem>
 
-bool is_vault_file(const std::filesystem::path& path);
+bool is_secret_file(const std::filesystem::path& path);
 
 #endif // VAULTSUTILS_H

@@ -16,6 +16,10 @@ bool string_compare_case_insensitive(std::string_view lhs, std::string_view rhs)
     return true;
 }
 
+bool string_contains(std::string_view lhs, std::string_view rhs) {
+    return lhs.find(rhs) != std::string::npos;
+}
+
 std::string string_to_lower(std::string_view str) {
     std::stringstream out;
 
@@ -40,6 +44,11 @@ std::optional<uint64_t> strtou(const std::string& s, uint8_t base) {
     return val;
 }
 
-bool string_contains(std::string_view lhs, std::string_view rhs) {
-    return lhs.find(rhs) != std::string::npos;
+void rtrim(std::string& s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         [](unsigned char ch) {
+                             return !std::isspace(ch);
+                         })
+                .base(),
+            s.end());
 }

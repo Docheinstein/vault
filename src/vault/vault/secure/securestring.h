@@ -1,0 +1,4 @@
+#ifndef SECURESTRING_H
+#define SECURESTRING_H
+
+#endif // SECURESTRING_H

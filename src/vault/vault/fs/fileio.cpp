@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <sys/stat.h>
 
 namespace {
@@ -15,7 +16,28 @@ size_t file_size(const std::string& filename) {
 }
 } // namespace
 
-read_file_result read_file(const std::string& filename) {
+read_text_file_result read_text_file(const std::string& filename) {
+    std::ifstream ifs {filename, std::ios::in};
+    if (!ifs) {
+        return std::unexpected {FileError::OpenError};
+    }
+
+    const size_t size = file_size(filename);
+    if (!size) {
+        return std::unexpected {FileError::StatError};
+    }
+
+    std::stringstream out {};
+    out << ifs.rdbuf();
+
+    if (ifs.fail()) {
+        return std::unexpected {FileError::IOError};
+    }
+
+    return out.str();
+}
+
+read_binary_file_result read_binary_file(const std::string& filename) {
     std::ifstream ifs {filename, std::ios::in | std::ios::binary};
     if (!ifs) {
         return std::unexpected {FileError::OpenError};
@@ -37,7 +59,7 @@ read_file_result read_file(const std::string& filename) {
     return out;
 }
 
-read_file_result read_file(const std::string& filename, const size_t length) {
+read_binary_file_result read_binary_file(const std::string& filename, const size_t length) {
     std::ifstream ifs {filename, std::ios::in | std::ios::binary};
     if (!ifs) {
         return std::unexpected {FileError::OpenError};
@@ -54,7 +76,7 @@ read_file_result read_file(const std::string& filename, const size_t length) {
     return out;
 }
 
-write_file_result write_file(const std::string& filename, const void* data, const size_t length) {
+write_binary_file_result write_binary_file(const std::string& filename, const void* data, const size_t length) {
     std::ofstream ofs {filename, std::ios::out | std::ios::binary};
     if (!ofs) {
         return std::unexpected {FileError::OpenError};
