@@ -20,6 +20,7 @@ ExternalProject_Add(libsodium
         USES_TERMINAL_TEST true
         PREFIX ${LIBSODIUM_INSTALL_DIR}
         SOURCE_DIR ${LIBSODIUM_SOURCE_DIR}
+        PATCH_COMMAND ./autogen.sh -s -b
         CONFIGURE_COMMAND ${LIBSODIUM_SOURCE_DIR}/configure --prefix ${LIBSODIUM_INSTALL_DIR}
         BUILD_COMMAND make -j14
         INSTALL_COMMAND make install
