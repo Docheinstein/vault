@@ -1,18 +1,27 @@
 #ifndef TUI_PROMPTUTILS_H
 #define TUI_PROMPTUTILS_H
 
-#include <cstdint>
+#include <optional>
 #include <string>
 
-std::string get_hidden_text();
-std::string get_text();
+#include "vault/secure/securestring.h"
 
-uint64_t get_number();
-
-std::string read_text_with_prompt(const std::string& prompt);
-std::string read_hidden_text_with_prompt(const std::string& prompt, bool allow_empty = false);
 uint32_t read_number_with_prompt(const std::string& prompt);
 
-std::string read_text_until_eof();
+std::optional<SecureString> secure_read_hidden_line();
+std::optional<SecureString> secure_read_line();
+std::optional<SecureString> secure_read_multiline();
+
+std::optional<SecureString> secure_read_hidden_line_with_prompt(const std::string& prompt);
+std::optional<SecureString> secure_read_line_with_prompt(const std::string& prompt);
+std::optional<SecureString> secure_read_multiline_with_prompt(const std::string& prompt);
+
+bool read_yes_no_with_prompt(const std::string& prompt, bool default_yes = true);
+
+void secure_write(const SecureString& text, bool newline = true);
+
+std::string read_line();
+
+std::string read_line_with_prompt(const std::string& prompt);
 
 #endif // TUI_PROMPTUTILS_H

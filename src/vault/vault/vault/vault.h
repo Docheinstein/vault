@@ -1,12 +1,21 @@
 #ifndef VAULT_H
 #define VAULT_H
 
+#include <expected>
 #include <string>
 
 #include "vault/common/retcodes.h"
+#include "vault/secure/securekey.h"
+#include "vault/secure/securestring.h"
 
-VaultReturnCode save_vault(const std::string& path, const std::string& password);
+enum class LoadVaultError { GenericError };
 
-VaultReturnCode load_vault(const std::string& path, const std::string& password, unsigned char secret_key[32]);
+enum class SaveVaultError { GenericError };
+
+using LoadVaultResult = std::expected<SecureKey, LoadVaultError>;
+using SaveVaultResult = std::expected<void, SaveVaultError>;
+
+SaveVaultResult save_vault(const std::string& path, const SecureString& password);
+LoadVaultResult load_vault(const std::string& path, const SecureString& password);
 
 #endif // VAULT_H

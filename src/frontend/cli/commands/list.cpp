@@ -17,7 +17,7 @@
 
 #include "commands/exitcodes.h"
 
-void command_list(int argc, char** argv) {
+int command_list(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
     } args;
@@ -26,21 +26,28 @@ void command_list(int argc, char** argv) {
     parser.add_argument(args.vault_path, "--vault-path", "-p").required(false).help("vault path (default is ~/.vault)");
 
     if (!parser.parse(argc, argv)) {
-        exit(EXIT_UNKNOWN_COMMAND);
+        return VAULT_GENERIC_ERROR;
     }
 
     const std::filesystem::path vault_path =
         args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
 
+    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
+
     // Check vault key.
-    const std::string vault_password = read_hidden_text_with_prompt("Enter vault password: ");
+    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    if (!vault_password) {
+        return VAULT_GENERIC_ERROR;
+    }
 
-    unsigned char secret_key[ENCRYPTION_SECRET_KEY_SIZE];
-    const bool ret = load_vault((vault_path / ".vault").string(), vault_password, secret_key);
+    const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
+    if (!load_vault_result) {
+        return VAULT_GENERIC_ERROR;
+    }
 
-    if (ret != VAULT_SUCCESS) {
+    if (!load_vault_result) {
         std::cerr << "ERROR: failed to open vault" << std::endl;
-        exit(EXIT_FAILURE);
+        return VAULT_GENERIC_ERROR;
     }
 
     std::vector<std::string> secrets_path = get_all_secrets(vault_path);
@@ -48,11 +55,12 @@ void command_list(int argc, char** argv) {
     for (uint32_t i = 0; i < secrets_path.size(); i++) {
         const auto& secret_path = secrets_path[i];
 
-        std::string secret_name {};
-        std::string secret_content {};
+        auto secret = load_secret(secret_path, *load_vault_result);
 
-        load_secret(secret_path, secret_key, secret_name, secret_content);
-
-        std::cout << i << ". " << bold(cyan(secret_name)) << std::endl;
+        std::cout << i << ". " << CYAN << std::flush;
+        secure_write(secret->name);
+        std::cout << RESET << std::flush;
     }
+
+    return VAULT_SUCCESS;
 }

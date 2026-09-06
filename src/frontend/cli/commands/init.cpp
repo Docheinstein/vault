@@ -14,7 +14,7 @@
 
 #include "commands/exitcodes.h"
 
-void command_init(int argc, char** argv) {
+int command_init(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
     } args;
@@ -23,25 +23,30 @@ void command_init(int argc, char** argv) {
     parser.add_argument(args.vault_path, "--vault-path", "-p").required(false).help("vault path (default is ~/.vault)");
 
     if (!parser.parse(argc, argv)) {
-        exit(EXIT_UNKNOWN_COMMAND);
+        return VAULT_GENERIC_ERROR;
     }
 
     const std::filesystem::path vault_path =
         args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
 
     if (std::filesystem::exists(vault_path / ".vault")) {
-        std::cerr << "ERROR: vault already exists" << std::endl;
-        exit(EXIT_FAILURE);
+        if (!read_yes_no_with_prompt("Vault already exists: overwrite? [y/N] ", false)) {
+            return VAULT_SUCCESS;
+        }
     }
 
-    const std::string password = read_hidden_text_with_prompt("Enter vault password: ");
+    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    if (!vault_password) {
+        return VAULT_GENERIC_ERROR;
+    }
 
-    const bool ret = save_vault((vault_path / ".vault").string(), password);
+    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
 
-    if (ret != VAULT_SUCCESS) {
+    const auto save_vault_result = save_vault(vault_master_file_path, *vault_password);
+    if (!save_vault_result) {
         std::cerr << "ERROR: failed to create vault" << std::endl;
-        exit(EXIT_FAILURE);
+        return VAULT_GENERIC_ERROR;
     }
 
-    std::cout << "Ok" << std::endl;
+    return VAULT_SUCCESS;
 }

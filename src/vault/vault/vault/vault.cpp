@@ -5,6 +5,7 @@
 #include "simdjson.h"
 
 #include "vault/fs/fileio.h"
+#include "vault/secure/securestring.h"
 
 /*
  * Scheme of the header.
@@ -95,24 +96,24 @@ void read_header_prologue(const unsigned char* const header, unsigned char* cons
 }
 } // namespace
 
-VaultReturnCode save_vault(const std::string& path, const std::string& password) {
+SaveVaultResult save_vault(const std::string& path, const SecureString& password) {
     unsigned char pwhash_salt[PWHASH_SALT_SIZE];
-    unsigned char encryption_secret_key[ENCRYPTION_SECRET_KEY_SIZE];
     unsigned char encryption_nonce[ENCRYPTION_NONCE_SIZE];
+    SecureKey encryption_secret_key {};
 
     // Check that password is safe.
-    const unsigned long long password_length = strnlen(password.c_str(), MAXIMUM_PASSWORD_LENGTH);
-    if (password_length >= MAXIMUM_PASSWORD_LENGTH) {
-        return VAULT_GENERIC_ERROR;
+    if (password.size() >= MAXIMUM_PASSWORD_LENGTH) {
+        return std::unexpected {SaveVaultError::GenericError};
     }
 
     // Generate random salt.
     randombytes_buf(pwhash_salt, sizeof(pwhash_salt));
 
     // Generate secret key from password (Argon2).
-    if (crypto_pwhash_argon2id(encryption_secret_key, sizeof(encryption_secret_key), password.c_str(), password_length,
-                               pwhash_salt, PWHASH_OPSLIMIT, PWHASH_MEMLIMIT, PWHASH_ALGO) != 0) {
-        return VAULT_GENERIC_ERROR;
+    if (crypto_pwhash(encryption_secret_key.data, ENCRYPTION_SECRET_KEY_SIZE,
+                      reinterpret_cast<const char*>(password.data()), password.size(), pwhash_salt, PWHASH_OPSLIMIT,
+                      PWHASH_MEMLIMIT, PWHASH_ALGO) != 0) {
+        return std::unexpected {SaveVaultError::GenericError};
     }
 
     // Generate nonce for encryption.
@@ -127,8 +128,8 @@ VaultReturnCode save_vault(const std::string& path, const std::string& password)
     output.resize(output_length);
 
     unsigned char* const ciphertext = output.data() + VAULT_HEADER_SIZE;
-    if (crypto_secretbox_easy(ciphertext, nullptr, 0, encryption_nonce, encryption_secret_key) != 0) {
-        return VAULT_GENERIC_ERROR;
+    if (crypto_secretbox_easy(ciphertext, nullptr, 0, encryption_nonce, encryption_secret_key.data) != 0) {
+        return std::unexpected {SaveVaultError::GenericError};
     }
 
     unsigned char* const header = output.data();
@@ -150,28 +151,25 @@ VaultReturnCode save_vault(const std::string& path, const std::string& password)
 
     const auto result = write_binary_file(path, output.data(), output.size());
     if (!result) {
-        return VAULT_GENERIC_ERROR;
+        return std::unexpected {SaveVaultError::GenericError};
     }
 
-    return VAULT_SUCCESS;
+    return {};
 }
 
-VaultReturnCode load_vault(const std::string& path, const std::string& password,
-                           unsigned char secret_key[ENCRYPTION_SECRET_KEY_SIZE]) {
-
-    const read_binary_file_result read_result = read_binary_file(path);
+LoadVaultResult load_vault(const std::string& path, const SecureString& password) {
+    const ReadBinaryFileResult read_result = read_binary_file(path);
     if (!read_result) {
-        return VAULT_GENERIC_ERROR;
+        return std::unexpected {LoadVaultError::GenericError};
     }
 
     if (read_result->size() < VAULT_HEADER_SIZE) {
-        return VAULT_GENERIC_ERROR;
+        return std::unexpected {LoadVaultError::GenericError};
     }
 
     // Check that password is safe.
-    const unsigned long long password_length = strnlen(password.c_str(), MAXIMUM_PASSWORD_LENGTH);
-    if (password_length >= MAXIMUM_PASSWORD_LENGTH) {
-        return VAULT_GENERIC_ERROR;
+    if (password.size() >= MAXIMUM_PASSWORD_LENGTH) {
+        return std::unexpected {LoadVaultError::GenericError};
     }
     unsigned char magic[VAULT_MAGIC_BYTES_SIZE];
     unsigned char pwhash_algo;
@@ -182,7 +180,7 @@ VaultReturnCode load_vault(const std::string& path, const std::string& password,
     read_header_prologue(data, magic, &pwhash_algo, &encryption_algo);
 
     if (memcmp(magic, VAULT_MAGIC_BYTES, VAULT_MAGIC_BYTES_SIZE) != 0) {
-        return VAULT_GENERIC_ERROR;
+        return std::unexpected {LoadVaultError::GenericError};
     }
 
     const unsigned char* const salt = data + VAULT_HEADER_PWHASH_SALT_POS;
@@ -198,21 +196,23 @@ VaultReturnCode load_vault(const std::string& path, const std::string& password,
     unsigned long long memlimit_val {};
     memcpy(&memlimit_val, memlimit, PWHASH_MEMLIMIT_SIZE);
 
+    SecureKey secret_key {};
+
     // Generate secret key from password.
-    if (crypto_pwhash(secret_key, ENCRYPTION_SECRET_KEY_SIZE, password.c_str(), password_length, salt, opslimit_val,
-                      memlimit_val, pwhash_algo) != 0) {
-        return VAULT_GENERIC_ERROR;
+    if (crypto_pwhash(secret_key.data, ENCRYPTION_SECRET_KEY_SIZE, reinterpret_cast<const char*>(password.data()),
+                      password.size(), salt, opslimit_val, memlimit_val, pwhash_algo) != 0) {
+        return std::unexpected {LoadVaultError::GenericError};
     }
 
     // Decrypt using secret key (ChaCha20Poly1035).
-    std::vector<unsigned char> output {};
 
     const unsigned long long ciphertext_length = read_result->size() - VAULT_HEADER_SIZE;
+    SecureString output {};
     output.resize(ciphertext_length - ENCRYPTION_MAC_SIZE);
 
-    if (crypto_secretbox_open_easy(output.data(), ciphertext, ciphertext_length, nonce, secret_key) != 0) {
-        return VAULT_GENERIC_ERROR;
+    if (crypto_secretbox_open_easy(output.data(), ciphertext, ciphertext_length, nonce, secret_key.data) != 0) {
+        return std::unexpected {LoadVaultError::GenericError};
     }
 
-    return VAULT_SUCCESS;
+    return secret_key;
 }

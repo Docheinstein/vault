@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <unistd.h>
 
 #include "args/args.h"
 
@@ -16,7 +17,57 @@
 
 #include "commands/exitcodes.h"
 
-void command_search(int argc, char** argv) {
+namespace {
+const char* search_string_case_insensitive(const char* haystack, size_t haystack_len, const char* needle,
+                                           size_t needle_len) {
+    size_t haystack_cursor = 0;
+    size_t needle_cursor = 0;
+
+    while (haystack_cursor < haystack_len && needle_cursor < needle_len) {
+        if (tolower(haystack[haystack_cursor]) == tolower(needle[needle_cursor])) {
+            ++needle_cursor;
+        } else {
+            needle_cursor = 0;
+        }
+        ++haystack_cursor;
+    }
+
+    if (haystack_cursor < haystack_len) {
+        return &haystack[haystack_cursor - needle_len];
+    }
+
+    return nullptr;
+}
+
+void print_highlight_case_insensitive(const char* haystack, const size_t haystack_len, const char* needle,
+                                      const size_t needle_len) {
+    const char* remaining_haystack = haystack;
+    size_t remaining_len = haystack_len;
+
+    const char* substr_match = nullptr;
+    do {
+        substr_match = search_string_case_insensitive(remaining_haystack, remaining_len, needle, needle_len);
+
+        if (!substr_match) {
+            write(STDOUT_FILENO, remaining_haystack, remaining_len);
+        } else {
+            write(STDOUT_FILENO, remaining_haystack, substr_match - remaining_haystack);
+
+            std::cout << BOLD << RED << std::flush;
+
+            write(STDOUT_FILENO, substr_match, needle_len);
+
+            std::cout << RESET << std::flush;
+
+            remaining_len = remaining_len - (substr_match - remaining_haystack) - needle_len;
+            remaining_haystack = substr_match + needle_len;
+        }
+    } while (substr_match);
+}
+
+} // namespace
+
+int command_search(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
         std::optional<std::string> search_pattern {};
@@ -27,59 +78,67 @@ void command_search(int argc, char** argv) {
     parser.add_argument(args.vault_path, "--vault-path", "-p").required(false).help("vault path (default is ~/.vault)");
 
     if (!parser.parse(argc, argv)) {
-        exit(EXIT_UNKNOWN_COMMAND);
+        return VAULT_GENERIC_ERROR;
     }
 
     const std::filesystem::path vault_path =
         args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
 
-    const std::string search_pattern =
-        args.search_pattern ? *args.search_pattern : read_text_with_prompt("Search pattern: ");
+    const auto search_pattern = args.search_pattern ? *args.search_pattern : read_line_with_prompt("Search pattern: ");
     const std::string search_pattern_lower = string_to_lower(search_pattern);
 
-    // Check vault key.
-    const std::string vault_password = read_hidden_text_with_prompt("Enter vault password: ");
+    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    if (!vault_password) {
+        std::cerr << "ERROR: failed to load vault pw" << std::endl;
+        return VAULT_GENERIC_ERROR;
+    }
 
-    unsigned char secret_key[ENCRYPTION_SECRET_KEY_SIZE];
-    const bool ret = load_vault((vault_path / ".vault").string(), vault_password, secret_key);
+    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
 
-    if (ret != VAULT_SUCCESS) {
-        std::cerr << "ERROR: failed to open vault" << std::endl;
-        exit(EXIT_FAILURE);
+    const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
+    if (!load_vault_result) {
+        std::cerr << "ERROR: failed to load vault" << std::endl;
+        return VAULT_GENERIC_ERROR;
     }
 
     std::vector<std::string> secrets_path = get_all_secrets(vault_path);
 
-    const auto highlight_matching = [](std::string str, const std::string& pattern) {
-        std::string out;
-        do {
-            if (const auto pos = string_to_lower(str).find(pattern); pos != std::string::npos) {
-                out += str.substr(0, pos);
-                out += red(str.substr(pos, pattern.size()));
-                str = str.substr(pos + pattern.size());
-            } else {
-                out += str;
-                break;
-            }
-
-        } while (!str.empty());
-
-        return out;
-    };
+    bool first_secret = true;
 
     for (uint32_t i = 0; i < secrets_path.size(); i++) {
         const auto& secret_path = secrets_path[i];
 
-        std::string secret_name {};
-        std::string secret_content {};
+        auto secret = load_secret(secret_path, *load_vault_result);
+        if (!secret) {
+            std::cerr << "ERROR: failed to load secret" << std::endl;
+            return VAULT_GENERIC_ERROR;
+        }
 
-        load_secret(secret_path, secret_key, secret_name, secret_content);
+        bool match_name =
+            search_string_case_insensitive(reinterpret_cast<const char*>(secret->name.data()), secret->name.size(),
+                                           search_pattern.c_str(), search_pattern.size());
 
-        if (string_to_lower(secret_name).find(search_pattern_lower) != std::string::npos ||
-            string_to_lower(secret_content).find(search_pattern_lower) != std::string::npos) {
-            std::cout << i << ". " << bold(highlight_matching(secret_name, search_pattern)) << "\n"
-                      << highlight_matching(secret_content, search_pattern) << "\n"
-                      << std::endl;
+        bool match_content =
+            search_string_case_insensitive(reinterpret_cast<const char*>(secret->content.data()),
+                                           secret->content.size(), search_pattern.c_str(), search_pattern.size());
+
+        if (match_name || match_content) {
+            if (!first_secret) {
+                std::cout << "\n";
+            }
+
+            first_secret = false;
+
+            std::cout << i << ". " << std::flush;
+
+            print_highlight_case_insensitive(reinterpret_cast<const char*>(secret->name.data()), secret->name.size(),
+                                             search_pattern.c_str(), search_pattern.size());
+            write(STDOUT_FILENO, "\n", 1);
+            print_highlight_case_insensitive(reinterpret_cast<const char*>(secret->content.data()),
+                                             secret->content.size(), search_pattern.c_str(), search_pattern.size());
+            write(STDOUT_FILENO, "\n", 1);
         }
     }
+
+    return VAULT_SUCCESS;
 }

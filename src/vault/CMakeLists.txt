@@ -4,7 +4,9 @@ target_sources(vault PUBLIC
     vault/common/retcodes.h
     vault/fs/fileio.h
     vault/fs/fileio.cpp
-    vault/secure/securestring.h
+    vault/secure/securekey.h
+    vault/secure/securekey.cpp
+    vault/secure/securestring.cpp
     vault/secure/securestring.cpp
     vault/utils/strings.h
     vault/utils/strings.cpp

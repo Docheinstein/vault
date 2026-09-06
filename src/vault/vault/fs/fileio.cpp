@@ -16,7 +16,7 @@ size_t file_size(const std::string& filename) {
 }
 } // namespace
 
-read_text_file_result read_text_file(const std::string& filename) {
+ReadTextFileResult read_text_file(const std::string& filename) {
     std::ifstream ifs {filename, std::ios::in};
     if (!ifs) {
         return std::unexpected {FileError::OpenError};
@@ -37,7 +37,7 @@ read_text_file_result read_text_file(const std::string& filename) {
     return out.str();
 }
 
-read_binary_file_result read_binary_file(const std::string& filename) {
+ReadBinaryFileResult read_binary_file(const std::string& filename) {
     std::ifstream ifs {filename, std::ios::in | std::ios::binary};
     if (!ifs) {
         return std::unexpected {FileError::OpenError};
@@ -59,7 +59,7 @@ read_binary_file_result read_binary_file(const std::string& filename) {
     return out;
 }
 
-read_binary_file_result read_binary_file(const std::string& filename, const size_t length) {
+ReadBinaryFileResult read_binary_file(const std::string& filename, const size_t length) {
     std::ifstream ifs {filename, std::ios::in | std::ios::binary};
     if (!ifs) {
         return std::unexpected {FileError::OpenError};
@@ -76,7 +76,7 @@ read_binary_file_result read_binary_file(const std::string& filename, const size
     return out;
 }
 
-write_binary_file_result write_binary_file(const std::string& filename, const void* data, const size_t length) {
+WriteBinaryFileResult write_binary_file(const std::string& filename, const void* data, const size_t length) {
     std::ofstream ofs {filename, std::ios::out | std::ios::binary};
     if (!ofs) {
         return std::unexpected {FileError::OpenError};

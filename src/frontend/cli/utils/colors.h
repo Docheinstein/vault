@@ -3,9 +3,13 @@
 
 #include <string>
 
+#define CYAN ATTR(34)
+#define RED ATTR(31)
+#define BOLD ATTR(1)
+#define RESET ATTR(0)
+
 #define ATTR(c) "\033[" #c "m"
-#define RESET() ATTR(0)
-#define ATTRIBUTIZE(c, t) ATTR(c) + t + RESET()
+#define ATTRIBUTIZE(c, t) ATTR(c) + t + RESET
 
 inline std::string red(const std::string& text) {
     return ATTRIBUTIZE(31, text);

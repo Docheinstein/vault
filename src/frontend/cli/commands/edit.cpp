@@ -14,7 +14,7 @@
 
 #include "commands/exitcodes.h"
 
-void command_edit(int argc, char** argv) {
+int command_edit(int argc, char** argv) {
     struct {
         std::optional<uint32_t> id {};
         std::optional<std::string> vault_path {};
@@ -28,56 +28,72 @@ void command_edit(int argc, char** argv) {
     parser.add_argument(args.id, "id").required(false).help("id of the entry");
 
     if (!parser.parse(argc, argv)) {
-        exit(EXIT_UNKNOWN_COMMAND);
+        return VAULT_GENERIC_ERROR;
     }
 
     const std::filesystem::path vault_path =
         args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
 
-    // Check vault key.
-    const std::string vault_password = read_hidden_text_with_prompt("Enter vault password: ");
+    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
+
+    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    if (!vault_password) {
+        return VAULT_GENERIC_ERROR;
+    }
+
+    const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
+    if (!load_vault_result) {
+        return VAULT_GENERIC_ERROR;
+    }
 
     const uint32_t id = args.id.has_value() ? args.id.value() : read_number_with_prompt("ID: ");
-
-    unsigned char secret_key[ENCRYPTION_SECRET_KEY_SIZE];
-    const bool ret = load_vault((vault_path / ".vault").string(), vault_password, secret_key);
-
-    if (ret != VAULT_SUCCESS) {
-        std::cerr << "ERROR: failed to open vault" << std::endl;
-        exit(EXIT_FAILURE);
-    }
 
     std::vector<std::string> secrets_path = get_all_secrets(vault_path);
 
     if (id >= secrets_path.size()) {
-        std::cerr << "ERROR: id " << id << " does not exist" << std::endl;
-        exit(EXIT_FAILURE);
+        std::cerr << "ERROR: invalid id " << id << std::endl;
+        return VAULT_GENERIC_ERROR;
     }
 
     const auto& secret_path = secrets_path[id];
 
-    std::string secret_name {};
-    std::string secret_content {};
+    auto secret = load_secret(secret_path, *load_vault_result);
+    if (!secret) {
+        std::cerr << "ERROR: failed to load secret" << std::endl;
+        return VAULT_GENERIC_ERROR;
+    }
 
-    load_secret(secret_path, secret_key, secret_name, secret_content);
-
-    std::string new_secret_content {};
     if (args.multiline) {
         std::cout << "Enter content and press Ctrl+D when finished" << std::endl;
-        new_secret_content = read_text_until_eof();
-    } else {
-        secret_content = read_hidden_text_with_prompt("Enter password: ", true);
-        if (read_hidden_text_with_prompt("Retype password: ", true) != secret_content) {
-            std::cerr << "ERROR: passwords do not match" << std::endl;
-            exit(EXIT_FAILURE);
+        auto secret_content = secure_read_multiline_with_prompt("Enter content and press Ctrl+D when finished\n");
+        if (!secret_content) {
+            return VAULT_GENERIC_ERROR;
         }
+        secret->content = std::move(*secret_content);
+    } else {
+        auto secret_content = secure_read_hidden_line_with_prompt("Enter password: ");
+        if (!secret_content) {
+            return VAULT_GENERIC_ERROR;
+        }
+        const auto secret_content_again = secure_read_hidden_line_with_prompt("Retype password: ");
+        if (!secret_content_again) {
+            return VAULT_GENERIC_ERROR;
+        }
+
+        if (secret_content->size() != secret_content_again->size() ||
+            sodium_memcmp(secret_content->data(), secret_content_again->data(), secret_content_again->size()) != 0) {
+            std::cerr << "ERROR: passwords do not match" << std::endl;
+            return VAULT_GENERIC_ERROR;
+        }
+        secret->content = std::move(*secret_content);
     }
 
-    const auto sec_ret = save_secret_into_vault(vault_path, secret_name, new_secret_content, secret_key);
-    if (sec_ret != VAULT_SUCCESS) {
+    const auto save_secret_result = save_secret_into_vault(vault_path, *load_vault_result, *secret, true);
+
+    if (!save_secret_result) {
         std::cerr << "ERROR: failed to save secret" << std::endl;
-        exit(EXIT_FAILURE);
+        return VAULT_GENERIC_ERROR;
     }
 
-    std::cout << "Ok, updated" << std::endl;
+    return VAULT_SUCCESS;
 }
