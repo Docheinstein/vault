@@ -10,9 +10,8 @@
 
 #include "utils/env.h"
 #include "utils/prompt.h"
-#include "utils/vaults.h"
 
-#include "commands/exitcodes.h"
+#include "utils/vaults.h"
 
 int command_edit(int argc, char** argv) {
     struct {
@@ -28,7 +27,7 @@ int command_edit(int argc, char** argv) {
     parser.add_argument(args.id, "id").required(false).help("id of the entry");
 
     if (!parser.parse(argc, argv)) {
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const std::filesystem::path vault_path =
@@ -36,14 +35,14 @@ int command_edit(int argc, char** argv) {
 
     const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
 
-    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    const auto vault_password = read_hidden_line_with_prompt_secure("Vault password: ");
     if (!vault_password) {
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
     if (!load_vault_result) {
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const uint32_t id = args.id.has_value() ? args.id.value() : read_number_with_prompt("ID: ");
@@ -52,7 +51,7 @@ int command_edit(int argc, char** argv) {
 
     if (id >= secrets_path.size()) {
         std::cerr << "ERROR: invalid id " << id << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const auto& secret_path = secrets_path[id];
@@ -60,40 +59,40 @@ int command_edit(int argc, char** argv) {
     auto secret = load_secret(secret_path, *load_vault_result);
     if (!secret) {
         std::cerr << "ERROR: failed to load secret" << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     if (args.multiline) {
         std::cout << "Enter content and press Ctrl+D when finished" << std::endl;
-        auto secret_content = secure_read_multiline_with_prompt("Enter content and press Ctrl+D when finished\n");
+        auto secret_content = read_multiline_with_prompt_secure("Enter content and press Ctrl+D when finished\n");
         if (!secret_content) {
-            return VAULT_GENERIC_ERROR;
+            return EXIT_FAILURE;
         }
         secret->content = std::move(*secret_content);
     } else {
-        auto secret_content = secure_read_hidden_line_with_prompt("Enter password: ");
+        auto secret_content = read_hidden_line_with_prompt_secure("Enter password: ");
         if (!secret_content) {
-            return VAULT_GENERIC_ERROR;
+            return EXIT_FAILURE;
         }
-        const auto secret_content_again = secure_read_hidden_line_with_prompt("Retype password: ");
+        const auto secret_content_again = read_hidden_line_with_prompt_secure("Retype password: ");
         if (!secret_content_again) {
-            return VAULT_GENERIC_ERROR;
+            return EXIT_FAILURE;
         }
 
         if (secret_content->size() != secret_content_again->size() ||
             sodium_memcmp(secret_content->data(), secret_content_again->data(), secret_content_again->size()) != 0) {
             std::cerr << "ERROR: passwords do not match" << std::endl;
-            return VAULT_GENERIC_ERROR;
+            return EXIT_FAILURE;
         }
         secret->content = std::move(*secret_content);
     }
 
-    const auto save_secret_result = save_secret_into_vault(vault_path, *load_vault_result, *secret, true);
+    const auto save_secret_result = save_secret(vault_path, *load_vault_result, *secret, true);
 
     if (!save_secret_result) {
         std::cerr << "ERROR: failed to save secret" << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
-    return VAULT_SUCCESS;
+    return EXIT_SUCCESS;
 }

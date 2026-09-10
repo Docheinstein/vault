@@ -1,33 +1,27 @@
-#include <cstring>
-#include <filesystem>
 #include <iostream>
-#include <ranges>
-
-#include "sodium.h"
-
-#include "args/args.h"
 
 #include "commands/add.h"
 #include "commands/edit.h"
-#include "commands/exitcodes.h"
 #include "commands/init.h"
 #include "commands/list.h"
 #include "commands/remove.h"
 #include "commands/search.h"
 #include "commands/show.h"
 
-#include <cstdlib>
-#include <sys/wait.h>
+#include "vault/init.h"
 
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "usage: {add,create,destroy,list,remove,search,show,update}" << std::endl;
         return EXIT_SUCCESS;
     }
-    sodium_init();
 
-    const std::string command = argv[1];
+    if (!vault_init()) {
+        std::cout << "ERROR: failed to initialize vault libraries" << std::endl;
+        return EXIT_FAILURE;
+    }
 
+    const std::string_view command = argv[1];
     const int cmd_argc = argc - 2;
     char** const cmd_argv = &argv[2];
 
@@ -60,5 +54,5 @@ int main(int argc, char** argv) {
     }
 
     std::cout << "ERROR: unknown command '" << command << "'" << std::endl;
-    return EXIT_UNKNOWN_COMMAND;
+    return EXIT_FAILURE;
 }

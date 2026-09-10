@@ -1,9 +1,8 @@
-#include "utils/vaults.h"
-#include "vault/utils/vaults.h"
 
 #include <iostream>
 
 #include "vault/utils/strings.h"
+#include "vault/vault/secret.h"
 
 std::vector<std::string> get_all_secrets(const std::filesystem::path& vault_path) {
     std::vector<std::string> secrets_path {};

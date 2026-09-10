@@ -1,9 +1,6 @@
 # args
 add_subdirectory(args)
 
-# simdjson
-add_subdirectory(simdjson)
-
 # libsodium
 include(ExternalProject)
 

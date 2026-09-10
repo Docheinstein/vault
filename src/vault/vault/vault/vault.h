@@ -2,20 +2,28 @@
 #define VAULT_H
 
 #include <expected>
-#include <string>
+#include <filesystem>
 
-#include "vault/common/retcodes.h"
-#include "vault/secure/securekey.h"
+#include "vault/secure/securearray.h"
 #include "vault/secure/securestring.h"
 
-enum class LoadVaultError { GenericError };
+enum class LoadVaultError : uint8_t {
+    PasswordTooLong,
+    ReadError,
+    InvalidFile,
+    UnexpectedFileParams,
+    KeyDerivationFailed,
+    DecryptionFailed
+};
 
-enum class SaveVaultError { GenericError };
+enum class SaveVaultError : uint8_t { PasswordTooLong, WriteError, KeyDerivationFailed, EncryptionFailed };
 
-using LoadVaultResult = std::expected<SecureKey, LoadVaultError>;
+using VaultKey = SecureArray<unsigned char, 32>;
+
+using LoadVaultResult = std::expected<VaultKey, LoadVaultError>;
 using SaveVaultResult = std::expected<void, SaveVaultError>;
 
-SaveVaultResult save_vault(const std::string& path, const SecureString& password);
-LoadVaultResult load_vault(const std::string& path, const SecureString& password);
+SaveVaultResult save_vault(const std::filesystem::path& path, const SecureString& password);
+LoadVaultResult load_vault(const std::filesystem::path& path, const SecureString& password);
 
 #endif // VAULT_H

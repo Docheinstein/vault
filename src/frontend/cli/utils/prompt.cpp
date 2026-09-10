@@ -8,12 +8,11 @@
 
 #include "vault/utils/strings.h"
 
-#include "commands/exitcodes.h"
-
 uint32_t read_number_with_prompt(const std::string& prompt) {
     const std::optional<uint64_t> id = strtou(read_line_with_prompt(prompt));
     if (!id) {
-        exit(EXIT_EXECUTION_FAILED);
+        // TODO, maybe return optional?
+        return 0;
     }
 
     return static_cast<uint32_t>(*id);
@@ -22,7 +21,7 @@ namespace {
 constexpr size_t STDIN_READ_CHUNK_SIZE = 256;
 }
 
-std::optional<SecureString> secure_read_hidden_line() {
+std::optional<SecureString> read_hidden_line_secure() {
     // Cache current terminal settings.
     termios oldt {};
     tcgetattr(STDIN_FILENO, &oldt);
@@ -32,7 +31,7 @@ std::optional<SecureString> secure_read_hidden_line() {
     newt.c_lflag &= ~ECHO;
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-    std::optional<SecureString> line = secure_read_line();
+    std::optional<SecureString> line = read_line_secure();
 
     // Restore previous terminal settings.
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
@@ -41,7 +40,7 @@ std::optional<SecureString> secure_read_hidden_line() {
     return line;
 }
 
-std::optional<SecureString> secure_read_line() {
+std::optional<SecureString> read_line_secure() {
     SecureString text {};
 
     while (true) {
@@ -70,7 +69,7 @@ std::optional<SecureString> secure_read_line() {
     return text;
 }
 
-std::optional<SecureString> secure_read_multiline() {
+std::optional<SecureString> read_multiline_secure() {
     SecureString text {};
 
     while (true) {
@@ -95,19 +94,19 @@ std::optional<SecureString> secure_read_multiline() {
     return text;
 }
 
-std::optional<SecureString> secure_read_hidden_line_with_prompt(const std::string& prompt) {
+std::optional<SecureString> read_hidden_line_with_prompt_secure(const std::string& prompt) {
     std::cout << prompt << std::flush;
-    return secure_read_hidden_line();
+    return read_hidden_line_secure();
 }
 
-std::optional<SecureString> secure_read_line_with_prompt(const std::string& prompt) {
+std::optional<SecureString> read_line_with_prompt_secure(const std::string& prompt) {
     std::cout << prompt << std::flush;
-    return secure_read_line();
+    return read_line_secure();
 }
 
-std::optional<SecureString> secure_read_multiline_with_prompt(const std::string& prompt) {
+std::optional<SecureString> read_multiline_with_prompt_secure(const std::string& prompt) {
     std::cout << prompt << std::flush;
-    return secure_read_multiline();
+    return read_multiline_secure();
 }
 
 bool read_yes_no_with_prompt(const std::string& prompt, bool default_yes) {

@@ -8,13 +8,13 @@
 
 uint32_t read_number_with_prompt(const std::string& prompt);
 
-std::optional<SecureString> secure_read_hidden_line();
-std::optional<SecureString> secure_read_line();
-std::optional<SecureString> secure_read_multiline();
+std::optional<SecureString> read_hidden_line_secure();
+std::optional<SecureString> read_line_secure();
+std::optional<SecureString> read_multiline_secure();
 
-std::optional<SecureString> secure_read_hidden_line_with_prompt(const std::string& prompt);
-std::optional<SecureString> secure_read_line_with_prompt(const std::string& prompt);
-std::optional<SecureString> secure_read_multiline_with_prompt(const std::string& prompt);
+std::optional<SecureString> read_hidden_line_with_prompt_secure(const std::string& prompt);
+std::optional<SecureString> read_line_with_prompt_secure(const std::string& prompt);
+std::optional<SecureString> read_multiline_with_prompt_secure(const std::string& prompt);
 
 bool read_yes_no_with_prompt(const std::string& prompt, bool default_yes = true);
 

@@ -10,9 +10,8 @@
 
 #include "utils/env.h"
 #include "utils/prompt.h"
-#include "utils/vaults.h"
 
-#include "commands/exitcodes.h"
+#include "utils/vaults.h"
 
 int command_remove(int argc, char** argv) {
     struct {
@@ -25,7 +24,7 @@ int command_remove(int argc, char** argv) {
     parser.add_argument(args.id, "id").required(false).help("id of the entry");
 
     if (!parser.parse(argc, argv)) {
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const std::filesystem::path vault_path =
@@ -33,16 +32,16 @@ int command_remove(int argc, char** argv) {
 
     const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
 
-    const auto vault_password = secure_read_hidden_line_with_prompt("Vault password: ");
+    const auto vault_password = read_hidden_line_with_prompt_secure("Vault password: ");
     if (!vault_password) {
         std::cerr << "ERROR: failed to load vault pw" << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
     if (!load_vault_result) {
         std::cerr << "ERROR: failed to load vault" << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     // Check vault key.
@@ -61,15 +60,15 @@ int command_remove(int argc, char** argv) {
 
     if (id >= secrets_path.size()) {
         std::cerr << "ERROR: invalid id " << id << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
     const auto& secret_path = secrets_path[id];
 
     if (!std::filesystem::remove(secret_path)) {
         std::cerr << "ERROR: failed to remove secret with id " << id << std::endl;
-        return VAULT_GENERIC_ERROR;
+        return EXIT_FAILURE;
     }
 
-    return VAULT_SUCCESS;
+    return EXIT_SUCCESS;
 }

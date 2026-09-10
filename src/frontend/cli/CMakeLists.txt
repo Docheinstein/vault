@@ -5,7 +5,6 @@ target_sources(vault-cli PUBLIC
         commands/add.cpp
         commands/init.h
         commands/init.cpp
-        commands/exitcodes.h
         commands/list.h
         commands/list.cpp
         commands/remove.h
