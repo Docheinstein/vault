@@ -1,6 +1,6 @@
-#ifndef CLI_CMDINIT_H
-#define CLI_CMDINIT_H
+#ifndef CMDINIT_H
+#define CMDINIT_H
 
 int command_init(int argc, char** argv);
 
-#endif // CLI_CMDINIT_H
+#endif // CMDINIT_H

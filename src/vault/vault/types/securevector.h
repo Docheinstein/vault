@@ -1,10 +1,10 @@
 #ifndef SECUREVECTOR_H
 #define SECUREVECTOR_H
 
-#include "sodium.h"
-
 #include <cstring>
 #include <iostream>
+
+#include "sodium.h"
 
 template <typename T>
 class SecureVector {
@@ -59,15 +59,6 @@ public:
         reserve(size_ + size);
         memcpy(data_ + size_, data, size);
         size_ += size;
-    }
-
-    unsigned char* prepare_append(size_t count) {
-        reserve(size_ + count);
-        return data_ + size_;
-    }
-
-    void commit_append(size_t actual) {
-        size_ += actual;
     }
 
     void reserve(size_t new_capacity) {

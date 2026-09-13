@@ -1,7 +1,5 @@
 #include "commands/add.h"
 
-#include <cstring>
-#include <iostream>
 #include <optional>
 #include <string>
 
@@ -10,10 +8,10 @@
 #include "vault/vault/secret.h"
 #include "vault/vault/vault.h"
 
-#include "utils/env.h"
-#include "utils/prompt.h"
+#include "utils/cli.h"
+#include "utils/vaults.h"
 
-#include <cstdlib>
+#include "commands/retcodes.h"
 
 int command_add(int argc, char** argv) {
     struct {
@@ -26,63 +24,59 @@ int command_add(int argc, char** argv) {
     parser.add_argument(args.vault_path, "--vault-path", "-p").required(false).help("vault path (default is ~/.vault)");
 
     if (!parser.parse(argc, argv)) {
-        return EXIT_FAILURE;
+        return VAULT_COMMAND_ARGS_PARSE_ERROR;
     }
 
     const std::filesystem::path vault_path =
-        args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
+        args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vault_path();
 
-    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
+    const std::filesystem::path vault_master_file_path = get_vault_master_file_path(vault_path);
 
     const auto vault_password = read_hidden_line_with_prompt_secure("Vault password: ");
     if (!vault_password) {
-        return EXIT_FAILURE;
+        return VAULT_STDIN_ERROR;
     }
 
-    const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
-    if (!load_vault_result) {
-        return EXIT_FAILURE;
+    const auto vault_key = load_vault(vault_master_file_path, *vault_password);
+    if (!vault_key) {
+        return VAULT_VAULT_LOAD_ERROR;
     }
-
-    Secret secret {};
 
     std::optional<SecureString> secret_name = read_line_with_prompt_secure("Name: ");
     if (!secret_name) {
-        return EXIT_FAILURE;
+        return VAULT_STDIN_ERROR;
     }
 
     std::optional<SecureString> secret_content;
     if (args.multiline) {
         secret_content = read_multiline_with_prompt_secure("Enter content and press Ctrl+D when finished\n");
         if (!secret_content) {
-            return EXIT_FAILURE;
+            return VAULT_STDIN_ERROR;
         }
     } else {
         secret_content = read_hidden_line_with_prompt_secure("Enter password: ");
         if (!secret_content) {
-            return EXIT_FAILURE;
+            return VAULT_STDIN_ERROR;
         }
+
         const auto secret_content_again = read_hidden_line_with_prompt_secure("Retype password: ");
         if (!secret_content_again) {
-            return EXIT_FAILURE;
+            return VAULT_STDIN_ERROR;
         }
 
         if (secret_content->size() != secret_content_again->size() ||
             sodium_memcmp(secret_content->data(), secret_content_again->data(), secret_content_again->size()) != 0) {
-            std::cerr << "ERROR: passwords do not match" << std::endl;
-            return EXIT_FAILURE;
+            return VAULT_PASSWORD_MISMATCH_ERROR;
         }
     }
 
-    secret.name = std::move(*secret_name);
-    secret.content = std::move(*secret_content);
+    Secret secret {.name = std::move(*secret_name), .content = std::move(*secret_content)};
 
-    const auto save_secret_result = save_secret(vault_path, *load_vault_result, secret, false);
+    const auto save_secret_result = save_secret(vault_path, *vault_key, secret, false);
 
     if (!save_secret_result) {
-        std::cerr << "ERROR: failed to save secret" << std::endl;
-        return EXIT_FAILURE;
+        return VAULT_SECRET_SAVE_ERROR;
     }
 
-    return EXIT_SUCCESS;
+    return VAULT_SUCCESS;
 }

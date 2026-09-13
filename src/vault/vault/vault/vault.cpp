@@ -3,7 +3,7 @@
 #include "sodium.h"
 
 #include "vault/fs/fileio.h"
-#include "vault/secure/securestring.h"
+#include "vault/types/securestring.h"
 
 /*
  * The vault file is a header-only file, with no actual content.
@@ -17,17 +17,17 @@
  * Scheme of the header.
  *
  * +--------------------------------------------------+
- * |                Header (128 bytes)                |
+ * |                Header (112 bytes)                |
  * |--------------------------------------------------|
  * | Description                 |  Range  | # Bytes  |
  * |--------------------------------------------------|
  * | Magic Bytes                 |    0:3  |       4  |
  * | Encryption Algorithm        |    4:4  |       1  |
  * | Password Hash Algorithm     |    5:5  |       1  |
- * | Unused                      |   6:31  |      26  |
+ * | Unused                      |   6:15  |      10  |
  * |--------------------------------------------------|
- * | Encryption Data      (*1*)  |  32:79  |      48  |
- * | Password Hash Data   (*2*)  | 80:127  |      48  |
+ * | Encryption Data      (*1*)  |  16:63  |      48  |
+ * | Password Hash Data   (*2*)  | 64:111  |      48  |
  * +--------------------------------------------------+
  *
  * +--------------------------------------------------+
@@ -71,7 +71,7 @@ constexpr unsigned char ENCRYPTION_ALGO = 0;
 constexpr unsigned long long VAULT_MAGIC_BYTES_SIZE = 4;
 constexpr unsigned char VAULT_MAGIC_BYTES[VAULT_MAGIC_BYTES_SIZE] = "VLT";
 
-constexpr unsigned long long VAULT_HEADER_SIZE = 128;
+constexpr unsigned long long VAULT_HEADER_SIZE = 112;
 
 constexpr unsigned long long VAULT_HEADER_PROLOGUE_BEGIN_POS = 0;
 constexpr unsigned long long VAULT_HEADER_ENCRYPTION_BEGIN_POS = 16;
@@ -169,7 +169,7 @@ LoadVaultResult load_vault(const std::filesystem::path& path, const SecureString
     }
 
     // Password checks.
-    if (password.size() >= MAXIMUM_PASSWORD_LENGTH) {
+    if (password.size() > MAXIMUM_PASSWORD_LENGTH) {
         return std::unexpected {LoadVaultError::PasswordTooLong};
     }
 

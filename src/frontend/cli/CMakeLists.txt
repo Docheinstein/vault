@@ -8,6 +8,7 @@ target_sources(vault-cli PUBLIC
         commands/list.h
         commands/list.cpp
         commands/remove.h
+        commands/retcodes.h
         commands/remove.cpp
         commands/search.h
         commands/search.cpp
@@ -15,11 +16,11 @@ target_sources(vault-cli PUBLIC
         commands/show.cpp
         commands/edit.h
         commands/edit.cpp
+        utils/cli.h
+        utils/cli.cpp
         utils/colors.h
-        utils/env.h
-        utils/env.cpp
-        utils/prompt.h
-        utils/prompt.cpp
+        utils/strings.h
+        utils/strings.cpp
         utils/vaults.h
         utils/vaults.cpp
         main.cpp

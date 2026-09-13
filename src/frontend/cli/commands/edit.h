@@ -1,6 +1,6 @@
-#ifndef CLI_CMDUPDATE_H
-#define CLI_CMDUPDATE_H
+#ifndef CMDEDIT_H
+#define CMDEDIT_H
 
 int command_edit(int argc, char** argv);
 
-#endif // CLI_CMDUPDATE_H
+#endif // CMDEDIT_H

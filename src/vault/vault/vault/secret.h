@@ -4,7 +4,7 @@
 #include <expected>
 #include <filesystem>
 
-#include "vault.h"
+#include "vault/vault/vault.h"
 
 struct Secret {
     SecureString name {};

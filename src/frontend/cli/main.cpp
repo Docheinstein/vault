@@ -5,54 +5,81 @@
 #include "commands/init.h"
 #include "commands/list.h"
 #include "commands/remove.h"
+#include "commands/retcodes.h"
 #include "commands/search.h"
 #include "commands/show.h"
 
 #include "vault/init.h"
 
+namespace {
+std::string get_error_message(int retcode) {
+    switch (retcode) {
+    case VAULT_LIBSODIUM_ERROR:
+        return "ERROR: failed to initialize vault libraries";
+    case VAULT_UNRECOGNIZED_COMMAND:
+        return "ERROR: unrecognized command";
+    case VAULT_COMMAND_ARGS_PARSE_ERROR:
+        return "ERROR: unrecognized command arguments";
+    case VAULT_STDIN_ERROR:
+        return "ERROR: broken IO";
+    case VAULT_PASSWORD_MISMATCH_ERROR:
+        return "ERROR: passwords do not match";
+    case VAULT_VAULT_LOAD_ERROR:
+        return "ERROR: failed to load vault";
+    case VAULT_VAULT_SAVE_ERROR:
+        return "ERROR: failed to save vault";
+    case VAULT_SECRET_LOAD_ERROR:
+        return "ERROR: failed to load secret";
+    case VAULT_SECRET_SAVE_ERROR:
+        return "ERROR: failed to save secret";
+    case VAULT_SECRET_REMOVE_ERROR:
+        return "ERROR: failed to remove secret";
+    case VAULT_INVALID_ID_ERROR:
+        return "ERROR: invalid id";
+    case VAULT_INVALID_SEARCH_PATTERN_ERROR:
+        return "ERROR: invalid search pattern";
+    default:
+        return "ERROR: unknown error";
+    }
+}
+} // namespace
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "usage: {add,create,destroy,list,remove,search,show,update}" << std::endl;
-        return EXIT_SUCCESS;
+        return VAULT_SUCCESS;
     }
 
     if (!vault_init()) {
         std::cout << "ERROR: failed to initialize vault libraries" << std::endl;
-        return EXIT_FAILURE;
+        return VAULT_LIBSODIUM_ERROR;
     }
 
     const std::string_view command = argv[1];
     const int cmd_argc = argc - 2;
     char** const cmd_argv = &argv[2];
 
+    int retcode = VAULT_UNRECOGNIZED_COMMAND;
+
     if (command == "add") {
-        return command_add(cmd_argc, cmd_argv);
+        retcode = command_add(cmd_argc, cmd_argv);
+    } else if (command == "init") {
+        retcode = command_init(cmd_argc, cmd_argv);
+    } else if (command == "list") {
+        retcode = command_list(cmd_argc, cmd_argv);
+    } else if (command == "remove") {
+        retcode = command_remove(cmd_argc, cmd_argv);
+    } else if (command == "search") {
+        retcode = command_search(cmd_argc, cmd_argv);
+    } else if (command == "show") {
+        retcode = command_show(cmd_argc, cmd_argv);
+    } else if (command == "edit") {
+        retcode = command_edit(cmd_argc, cmd_argv);
     }
 
-    if (command == "init") {
-        return command_init(cmd_argc, cmd_argv);
+    if (retcode != VAULT_SUCCESS) {
+        std::cerr << get_error_message(retcode) << std::endl;
     }
 
-    if (command == "list") {
-        return command_list(cmd_argc, cmd_argv);
-    }
-
-    if (command == "remove") {
-        return command_remove(cmd_argc, cmd_argv);
-    }
-
-    if (command == "search") {
-        return command_search(cmd_argc, cmd_argv);
-    }
-
-    if (command == "show") {
-        return command_show(cmd_argc, cmd_argv);
-    }
-
-    if (command == "edit") {
-        return command_edit(cmd_argc, cmd_argv);
-    }
-
-    std::cout << "ERROR: unknown command '" << command << "'" << std::endl;
-    return EXIT_FAILURE;
+    return retcode;
 }

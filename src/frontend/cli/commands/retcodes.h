@@ -1,0 +1,18 @@
+#ifndef CMDRETCODES_H
+#define CMDRETCODES_H
+
+constexpr int VAULT_SUCCESS = 0;
+constexpr int VAULT_LIBSODIUM_ERROR = 1;
+constexpr int VAULT_UNRECOGNIZED_COMMAND = 2;
+constexpr int VAULT_COMMAND_ARGS_PARSE_ERROR = 3;
+constexpr int VAULT_STDIN_ERROR = 4;
+constexpr int VAULT_PASSWORD_MISMATCH_ERROR = 5;
+constexpr int VAULT_VAULT_LOAD_ERROR = 6;
+constexpr int VAULT_VAULT_SAVE_ERROR = 7;
+constexpr int VAULT_SECRET_LOAD_ERROR = 8;
+constexpr int VAULT_SECRET_SAVE_ERROR = 9;
+constexpr int VAULT_SECRET_REMOVE_ERROR = 10;
+constexpr int VAULT_INVALID_ID_ERROR = 11;
+constexpr int VAULT_INVALID_SEARCH_PATTERN_ERROR = 12;
+
+#endif // CMDRETCODES_H

@@ -5,11 +5,9 @@ target_sources(vault PUBLIC
     vault/init.cpp
     vault/fs/fileio.h
     vault/fs/fileio.cpp
-    vault/secure/securearray.h
-    vault/secure/securestring.h
-    vault/secure/securevector.h
-    vault/utils/strings.h
-    vault/utils/strings.cpp
+    vault/types/securearray.h
+    vault/types/securestring.h
+    vault/types/securevector.h
     vault/vault/secret.h
     vault/vault/secret.cpp
     vault/vault/vault.h

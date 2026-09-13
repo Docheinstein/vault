@@ -177,6 +177,7 @@ SaveSecretResult save_secret(const std::filesystem::path& vault_path, const Vaul
 
     // Save file.
     if (!allow_replace && std::filesystem::exists(secret_path)) {
+        // Replacement disallowed and file already exists: do nothing.
         return std::unexpected {SaveSecretError::WriteError};
     }
 

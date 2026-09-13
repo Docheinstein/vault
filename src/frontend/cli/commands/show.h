@@ -1,6 +1,6 @@
-#ifndef CLI_CMDSHOW_H
-#define CLI_CMDSHOW_H
+#ifndef CMDSHOW_H
+#define CMDSHOW_H
 
 int command_show(int argc, char** argv);
 
-#endif // CLI_CMDSHOW_H
+#endif // CMDSHOW_H

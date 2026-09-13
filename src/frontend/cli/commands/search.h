@@ -1,6 +1,6 @@
-#ifndef CLI_CMDSEARCH_H
-#define CLI_CMDSEARCH_H
+#ifndef CMDSEARCH_H
+#define CMDSEARCH_H
 
 int command_search(int argc, char** argv);
 
-#endif // CLI_CMDSEARCH_H
+#endif // CMDSEARCH_H

@@ -4,8 +4,8 @@
 #include <expected>
 #include <filesystem>
 
-#include "vault/secure/securearray.h"
-#include "vault/secure/securestring.h"
+#include "vault/types/securearray.h"
+#include "vault/types/securestring.h"
 
 enum class LoadVaultError : uint8_t {
     PasswordTooLong,

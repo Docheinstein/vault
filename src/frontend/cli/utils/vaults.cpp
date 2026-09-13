@@ -1,10 +1,29 @@
+#include "utils/vaults.h"
 
 #include <iostream>
 
-#include "vault/utils/strings.h"
 #include "vault/vault/secret.h"
 
-std::vector<std::string> get_all_secrets(const std::filesystem::path& vault_path) {
+namespace {
+const char* get_default_home_path() {
+    if (const char* const home_path = getenv("HOME")) {
+        return home_path;
+    }
+
+    return "";
+}
+} // namespace
+
+std::filesystem::path get_default_vault_path() {
+    const std::filesystem::path vaults_path = get_default_home_path();
+    return vaults_path / ".vault";
+}
+
+std::filesystem::path get_vault_master_file_path(const std::filesystem::path& vault_path) {
+    return vault_path / ".vault";
+}
+
+std::vector<std::string> get_vault_secrets(const std::filesystem::path& vault_path) {
     std::vector<std::string> secrets_path {};
     for (const auto& iter : std::filesystem::directory_iterator(vault_path)) {
         if (is_secret_file(iter.path())) {

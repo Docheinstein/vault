@@ -1,18 +1,18 @@
 #include "commands/show.h"
 
-#include <iostream>
 #include <optional>
 #include <string>
 
 #include "args/args.h"
 
+#include "vault/vault/secret.h"
 #include "vault/vault/vault.h"
 
+#include "utils/cli.h"
 #include "utils/colors.h"
-#include "utils/env.h"
-#include "utils/prompt.h"
-
 #include "utils/vaults.h"
+
+#include "commands/retcodes.h"
 
 int command_show(int argc, char** argv) {
     struct {
@@ -25,68 +25,57 @@ int command_show(int argc, char** argv) {
     parser.add_argument(args.id, "id").required(false).help("id of the entry");
 
     if (!parser.parse(argc, argv)) {
-        return EXIT_FAILURE;
+        return VAULT_COMMAND_ARGS_PARSE_ERROR;
     }
 
     const std::filesystem::path vault_path =
-        args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vaults_path();
+        args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vault_path();
 
-    const std::filesystem::path vault_master_file_path = (vault_path / ".vault");
+    const std::filesystem::path vault_master_file_path = get_vault_master_file_path(vault_path);
 
     const auto vault_password = read_hidden_line_with_prompt_secure("Vault password: ");
     if (!vault_password) {
-        std::cerr << "ERROR: failed to load vault pw" << std::endl;
-        return EXIT_FAILURE;
+        return VAULT_STDIN_ERROR;
     }
 
-    const auto load_vault_result = load_vault(vault_master_file_path, *vault_password);
-    if (!load_vault_result) {
-        std::cerr << "ERROR: failed to load vault " << static_cast<uint32_t>(load_vault_result.error()) << std::endl;
-        return EXIT_FAILURE;
+    const auto vault_key = load_vault(vault_master_file_path, *vault_password);
+    if (!vault_key) {
+        return VAULT_VAULT_LOAD_ERROR;
     }
 
-    std::vector<std::string> secrets_path = get_all_secrets(vault_path);
+    const std::vector<std::string> secrets_paths = get_vault_secrets(vault_path);
 
     if (args.id) {
-        if (*args.id >= secrets_path.size()) {
-            std::cerr << "ERROR: id " << *args.id << " does not exist" << std::endl;
-            return EXIT_FAILURE;
+        if (*args.id >= secrets_paths.size()) {
+            return VAULT_INVALID_ID_ERROR;
         }
 
-        const auto& secret_path = secrets_path[*args.id];
+        const auto& secret_path = secrets_paths[*args.id];
 
-        auto secret = load_secret(secret_path, *load_vault_result);
+        const auto secret = load_secret(secret_path, *vault_key);
         if (!secret) {
-            std::cerr << "ERROR: failed to load secret" << std::endl;
-            return EXIT_FAILURE;
+            return VAULT_SECRET_LOAD_ERROR;
         }
 
-        std::cout << *args.id << ". " << CYAN << std::flush;
-        secure_write(secret->name);
-        std::cout << RESET << std::flush;
-
-        secure_write(secret->content);
+        secure_cout << *args.id << ". " << CYAN << secret->name << RESET << std::endl;
+        secure_cout << secret->content << std::endl;
     } else {
-        for (uint32_t i = 0; i < secrets_path.size(); i++) {
-            const auto& secret_path = secrets_path[i];
+        for (uint32_t i = 0; i < secrets_paths.size(); i++) {
+            const auto& secret_path = secrets_paths[i];
 
-            auto secret = load_secret(secret_path, *load_vault_result);
+            auto secret = load_secret(secret_path, *vault_key);
             if (!secret) {
-                std::cerr << "ERROR: failed to load secret" << std::endl;
-                return EXIT_FAILURE;
+                return VAULT_SECRET_LOAD_ERROR;
             }
 
-            std::cout << i << ". " << CYAN << std::flush;
-            secure_write(secret->name);
-            std::cout << RESET << std::flush;
+            secure_cout << i << ". " << CYAN << secret->name << RESET << std::endl;
+            secure_cout << secret->content << std::endl;
 
-            secure_write(secret->content);
-
-            if (i != secrets_path.size() - 1) {
-                std::cout << "\n";
+            if (i != secrets_paths.size() - 1) {
+                secure_cout << std::endl;
             }
         }
     }
 
-    return EXIT_SUCCESS;
+    return VAULT_SUCCESS;
 }

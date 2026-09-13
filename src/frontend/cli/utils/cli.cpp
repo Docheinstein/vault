@@ -1,24 +1,24 @@
-#include "utils/prompt.h"
+#include "utils/cli.h"
 
-#include <cstdlib>
 #include <iostream>
-#include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
 
-#include "vault/utils/strings.h"
+#include "utils/strings.h"
 
-uint32_t read_number_with_prompt(const std::string& prompt) {
-    const std::optional<uint64_t> id = strtou(read_line_with_prompt(prompt));
-    if (!id) {
-        // TODO, maybe return optional?
-        return 0;
-    }
-
-    return static_cast<uint32_t>(*id);
-}
 namespace {
 constexpr size_t STDIN_READ_CHUNK_SIZE = 256;
+}
+
+std::string read_line() {
+    std::string text {};
+    getline(std::cin, text);
+    return text;
+}
+
+std::string read_line_with_prompt(const std::string& prompt) {
+    std::cout << prompt;
+    return read_line();
 }
 
 std::optional<SecureString> read_hidden_line_secure() {
@@ -44,28 +44,39 @@ std::optional<SecureString> read_line_secure() {
     SecureString text {};
 
     while (true) {
-        unsigned char* buf = text.prepare_append(STDIN_READ_CHUNK_SIZE);
-        const ssize_t ret = read(STDIN_FILENO, buf, STDIN_READ_CHUNK_SIZE);
+        // Reserve space for the next read.
+        text.reserve(text.size() + STDIN_READ_CHUNK_SIZE);
+
+        unsigned char* const buffer = text.data() + text.size();
+
+        // Read the next 256 bytes.
+        const ssize_t ret = read(STDIN_FILENO, buffer, STDIN_READ_CHUNK_SIZE);
+
         if (ret < 0) {
+            // Read error.
             return std::nullopt;
         }
 
         if (ret == 0) {
-            // EOF
+            // EOF.
             break;
         }
-        text.commit_append(ret);
 
+        // Actually update the string size.
+        text.resize(text.size() + ret);
+
+        // Stop as soon as new line is found.
         if (text.data()[text.size() - 1] == '\n') {
             text.resize(text.size() - 1);
             break;
         }
 
-        // TODO: maybe quit anyway for sending only one ctrl+d?
         if (static_cast<size_t>(ret) < STDIN_READ_CHUNK_SIZE) {
+            // No more bytes to read.
             break;
         }
     }
+
     return text;
 }
 
@@ -73,21 +84,30 @@ std::optional<SecureString> read_multiline_secure() {
     SecureString text {};
 
     while (true) {
-        unsigned char* buf = text.prepare_append(STDIN_READ_CHUNK_SIZE);
-        const ssize_t ret = read(STDIN_FILENO, buf, STDIN_READ_CHUNK_SIZE);
-        // std::cout << "ret: " << ret << std::endl;
+        // Reserve space for the next read.
+        text.reserve(text.size() + STDIN_READ_CHUNK_SIZE);
+
+        unsigned char* const buffer = text.data() + text.size();
+
+        // Read the next 256 bytes.
+        const ssize_t ret = read(STDIN_FILENO, buffer, STDIN_READ_CHUNK_SIZE);
+
         if (ret < 0) {
+            // Read error.
             return std::nullopt;
         }
 
         if (ret == 0) {
-            // EOF
+            // EOF.
             break;
         }
-        text.commit_append(ret);
+
+        // Actually update the string size.
+        text.resize(text.size() + ret);
     }
 
-    if (text.data()[text.size() - 1] == '\n') {
+    // Eventually trim last new line.
+    if (text.size() > 0 && text.data()[text.size() - 1] == '\n') {
         text.resize(text.size() - 1);
     }
 
@@ -109,6 +129,10 @@ std::optional<SecureString> read_multiline_with_prompt_secure(const std::string&
     return read_multiline_secure();
 }
 
+std::optional<uint64_t> read_number_with_prompt(const std::string& prompt) {
+    return strtou(read_line_with_prompt(prompt));
+}
+
 bool read_yes_no_with_prompt(const std::string& prompt, bool default_yes) {
     std::cout << prompt << std::flush;
     std::string input;
@@ -116,24 +140,17 @@ bool read_yes_no_with_prompt(const std::string& prompt, bool default_yes) {
     return input.empty() ? default_yes : tolower(input[0]) == 'y';
 }
 
-void secure_write(const SecureString& string, const bool newline) {
-    write(STDOUT_FILENO, string.data(), string.size());
-    if (newline) {
-        write(STDOUT_FILENO, "\n", 1);
-    }
+SecureCout& SecureCout::operator<<(std::ostream& (*manip)(std::ostream&)) {
+    std::cout << manip;
+    return *this;
 }
 
-std::string read_line() {
-    std::string text {};
-    getline(std::cin, text);
-    return text;
+SecureCout& SecureCout::operator<<(const SecureString& secret) {
+    write(secret.data(), secret.size());
+    return *this;
 }
 
-std::string read_line_with_prompt(const std::string& prompt) {
-    std::string text;
-    while (text.empty()) {
-        std::cout << prompt;
-        text = read_line();
-    }
-    return text;
+void SecureCout::write(const unsigned char* const buffer, size_t size) {
+    std::cout.flush();
+    ::write(STDOUT_FILENO, buffer, size);
 }

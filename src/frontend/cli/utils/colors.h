@@ -1,26 +1,9 @@
-#ifndef TUI_COLORS_H
-#define TUI_COLORS_H
+#ifndef COLORSUTILS_H
+#define COLORSUTILS_H
 
-#include <string>
+constexpr const char* const RESET = "\033[0m";
+constexpr const char* const BOLD = "\033[1m";
+constexpr const char* const RED = "\033[31m";
+constexpr const char* const CYAN = "\033[34m";
 
-#define CYAN ATTR(34)
-#define RED ATTR(31)
-#define BOLD ATTR(1)
-#define RESET ATTR(0)
-
-#define ATTR(c) "\033[" #c "m"
-#define ATTRIBUTIZE(c, t) ATTR(c) + t + RESET
-
-inline std::string red(const std::string& text) {
-    return ATTRIBUTIZE(31, text);
-}
-
-inline std::string cyan(const std::string& text) {
-    return ATTRIBUTIZE(34, text);
-}
-
-inline std::string bold(const std::string& text) {
-    return ATTRIBUTIZE(1, text);
-}
-
-#endif // TUI_COLORS_H
+#endif // COLORSUTILS_H

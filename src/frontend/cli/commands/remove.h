@@ -1,6 +1,6 @@
-#ifndef CLI_CMDREMOVE_H
-#define CLI_CMDREMOVE_H
+#ifndef CMDREMOVE_H
+#define CMDREMOVE_H
 
 int command_remove(int argc, char** argv);
 
-#endif // CLI_CMDREMOVE_H
+#endif // CMDREMOVE_H
