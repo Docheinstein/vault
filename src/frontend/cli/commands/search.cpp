@@ -3,7 +3,6 @@
 #include <iostream>
 #include <optional>
 #include <string>
-#include <unistd.h>
 
 #include "args/args.h"
 
@@ -14,7 +13,7 @@
 #include "utils/colors.h"
 #include "utils/vaults.h"
 
-#include "commands/retcodes.h"
+#include "retcodes.h"
 
 namespace {
 const unsigned char* search_string_case_insensitive(const unsigned char* haystack, const size_t haystack_len,

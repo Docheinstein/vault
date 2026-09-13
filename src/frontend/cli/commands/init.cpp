@@ -1,4 +1,5 @@
 #include "commands/init.h"
+#include "git/init.h"
 
 #include <optional>
 #include <string>
@@ -10,7 +11,7 @@
 #include "utils/cli.h"
 #include "utils/vaults.h"
 
-#include "commands/retcodes.h"
+#include "retcodes.h"
 
 int command_init(int argc, char** argv) {
     struct {
@@ -44,6 +45,14 @@ int command_init(int argc, char** argv) {
     if (!save_vault_result) {
         return VAULT_VAULT_SAVE_ERROR;
     }
+
+#ifdef ENABLE_GIT
+    // Eventually init git repository.
+    if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
+        const std::string git_repo_path = read_line_with_prompt("Git remote URL: ");
+        git_init(vault_path, git_repo_path);
+    }
+#endif
 
     return VAULT_SUCCESS;
 }

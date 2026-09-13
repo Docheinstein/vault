@@ -5,16 +5,16 @@
 #include "commands/init.h"
 #include "commands/list.h"
 #include "commands/remove.h"
-#include "commands/retcodes.h"
 #include "commands/search.h"
 #include "commands/show.h"
+#include "retcodes.h"
 
 #include "vault/init.h"
 
 namespace {
 std::string get_error_message(int retcode) {
     switch (retcode) {
-    case VAULT_LIBSODIUM_ERROR:
+    case VAULT_BOOTSTRAP_FAILED:
         return "ERROR: failed to initialize vault libraries";
     case VAULT_UNRECOGNIZED_COMMAND:
         return "ERROR: unrecognized command";
@@ -38,6 +38,10 @@ std::string get_error_message(int retcode) {
         return "ERROR: invalid id";
     case VAULT_INVALID_SEARCH_PATTERN_ERROR:
         return "ERROR: invalid search pattern";
+    case VAULT_GIT_INIT_ERROR:
+        return "ERROR: failed to init git repository";
+    case VAULT_GIT_SET_REMOTE_ERROR:
+        return "ERROR: failed to set git repository remote url";
     default:
         return "ERROR: unknown error";
     }
@@ -51,8 +55,8 @@ int main(int argc, char** argv) {
     }
 
     if (!vault_init()) {
-        std::cout << "ERROR: failed to initialize vault libraries" << std::endl;
-        return VAULT_LIBSODIUM_ERROR;
+        std::cerr << get_error_message(VAULT_BOOTSTRAP_FAILED) << std::endl;
+        return VAULT_BOOTSTRAP_FAILED;
     }
 
     const std::string_view command = argv[1];
@@ -80,6 +84,8 @@ int main(int argc, char** argv) {
     if (retcode != VAULT_SUCCESS) {
         std::cerr << get_error_message(retcode) << std::endl;
     }
+
+    vault_deinit();
 
     return retcode;
 }

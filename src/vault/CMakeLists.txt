@@ -16,6 +16,10 @@ target_sources(vault PUBLIC
 
 target_include_directories(vault PUBLIC .)
 
-target_link_libraries(vault PUBLIC libsodium_deps libgit2_deps)
+target_link_libraries(vault PUBLIC libsodium_deps)
+
+if (ENABLE_GIT)
+    target_link_libraries(vault PUBLIC libgit2_deps)
+endif()
 
 add_dependencies(vault libsodium)

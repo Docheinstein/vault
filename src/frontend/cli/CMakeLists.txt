@@ -8,7 +8,6 @@ target_sources(vault-cli PUBLIC
         commands/list.h
         commands/list.cpp
         commands/remove.h
-        commands/retcodes.h
         commands/remove.cpp
         commands/search.h
         commands/search.cpp
@@ -24,7 +23,15 @@ target_sources(vault-cli PUBLIC
         utils/vaults.h
         utils/vaults.cpp
         main.cpp
+        retcodes.h
 )
+
+if (ENABLE_GIT)
+    target_sources(vault-cli PUBLIC
+            git/init.h
+            git/init.cpp
+    )
+endif()
 
 target_include_directories(vault-cli PUBLIC .)
 

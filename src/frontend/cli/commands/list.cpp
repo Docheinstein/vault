@@ -1,6 +1,5 @@
 #include "commands/list.h"
 
-#include <cstring>
 #include <optional>
 #include <string>
 
@@ -13,7 +12,7 @@
 #include "utils/colors.h"
 #include "utils/vaults.h"
 
-#include "commands/retcodes.h"
+#include "retcodes.h"
 
 int command_list(int argc, char** argv) {
     struct {

@@ -12,7 +12,7 @@
 #include "utils/colors.h"
 #include "utils/vaults.h"
 
-#include "commands/retcodes.h"
+#include "retcodes.h"
 
 int command_show(int argc, char** argv) {
     struct {

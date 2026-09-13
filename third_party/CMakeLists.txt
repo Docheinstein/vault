@@ -30,19 +30,21 @@ target_include_directories(libsodium_deps INTERFACE ${LIBSODIUM_INSTALL_DIR}/inc
 target_link_libraries(libsodium_deps INTERFACE ${LIBSODIUM_INSTALL_DIR}/lib/libsodium.a)
 
 # libgit2
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build Shared Library (OFF for Static)" FORCE)
-set(BUILD_TESTS OFF CACHE BOOL "Build Tests using the Clar suite" FORCE)
-set(BUILD_CLI OFF CACHE BOOL  "Build the command-line interface" FORCE)
-set(BUILD_EXAMPLES OFF CACHE BOOL   "Build library usage example apps" FORCE)
-set(BUILD_FUZZERS OFF CACHE BOOL   "Build the fuzz targets" FORCE)
+if (ENABLE_GIT)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build Shared Library (OFF for Static)" FORCE)
+    set(BUILD_TESTS OFF CACHE BOOL "Build Tests using the Clar suite" FORCE)
+    set(BUILD_CLI OFF CACHE BOOL  "Build the command-line interface" FORCE)
+    set(BUILD_EXAMPLES OFF CACHE BOOL   "Build library usage example apps" FORCE)
+    set(BUILD_FUZZERS OFF CACHE BOOL   "Build the fuzz targets" FORCE)
 
-set(USE_HTTPS OpenSSL)
-set(USE_BUNDLED_ZLIB ON)
+    set(USE_HTTPS OpenSSL)
+    set(USE_BUNDLED_ZLIB ON)
 
-find_package(OpenSSL REQUIRED)
-add_subdirectory(libgit2)
+    find_package(OpenSSL REQUIRED)
+    add_subdirectory(libgit2)
 
-add_library(libgit2_deps INTERFACE)
-target_link_libraries(libgit2_deps INTERFACE
-    zlib util libgit2 ntlmclient llhttp pcre2 reftable xdiff OpenSSL::SSL)
+    add_library(libgit2_deps INTERFACE)
+    target_include_directories(libgit2_deps INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/libgit2/include)
+    target_link_libraries(libgit2_deps INTERFACE libgit2package)
+endif()
 

@@ -8,10 +8,10 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-option(DEBUG_STORE_PLAINTEXT "Store/Load plain text instead of encrypted data" OFF)
+option(ENABLE_GIT "Build with libgit to support sync of secrets with remote repository" ON)
 
-if (DEBUG_STORE_PLAINTEXT)
-    add_compile_definitions(DEBUG_STORE_PLAINTEXT)
+if (ENABLE_GIT)
+    add_compile_definitions(ENABLE_GIT)
 endif()
 
 add_subdirectory(third_party)

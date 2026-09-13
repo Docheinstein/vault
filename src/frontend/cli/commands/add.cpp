@@ -11,7 +11,7 @@
 #include "utils/cli.h"
 #include "utils/vaults.h"
 
-#include "commands/retcodes.h"
+#include "retcodes.h"
 
 int command_add(int argc, char** argv) {
     struct {
