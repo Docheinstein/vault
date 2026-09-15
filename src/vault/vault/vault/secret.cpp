@@ -186,7 +186,7 @@ SaveSecretResult save_secret(const std::filesystem::path& vault_path, const Vaul
         return std::unexpected {SaveSecretError::WriteError};
     }
 
-    return {};
+    return secret_path;
 }
 
 LoadSecretResult load_secret(const std::filesystem::path& secret_path, const VaultKey& vault_key) {

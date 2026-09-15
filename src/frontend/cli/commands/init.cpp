@@ -1,5 +1,4 @@
 #include "commands/init.h"
-#include "git/init.h"
 
 #include <optional>
 #include <string>
@@ -9,7 +8,15 @@
 #include "vault/vault/vault.h"
 
 #include "utils/cli.h"
-#include "utils/vaults.h"
+#include "utils/vault.h"
+
+#ifdef ENABLE_GIT
+#include "utils/git.h"
+
+#include "git/add.h"
+#include "git/commit.h"
+#include "git/init.h"
+#endif
 
 #include "retcodes.h"
 
@@ -48,9 +55,26 @@ int command_init(int argc, char** argv) {
 
 #ifdef ENABLE_GIT
     // Eventually init git repository.
-    if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
-        const std::string git_repo_path = read_line_with_prompt("Git remote URL: ");
-        git_init(vault_path, git_repo_path);
+    if (!has_git_repository(vault_path)) {
+        if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
+            const std::string git_repo_path = read_line_with_prompt("Git remote URL: ");
+
+            int git_retcode = vault_git_init(vault_path, git_repo_path);
+            if (git_retcode != VAULT_SUCCESS) {
+                return git_retcode;
+            }
+
+            // Add and commit the vault master file.
+            git_retcode = vault_git_add(vault_path, vault_master_file_path);
+            if (git_retcode != VAULT_SUCCESS) {
+                return git_retcode;
+            }
+
+            git_retcode = vault_git_commit(vault_path, "Initialize vault");
+            if (git_retcode != VAULT_SUCCESS) {
+                return git_retcode;
+            }
+        }
     }
 #endif
 

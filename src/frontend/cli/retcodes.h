@@ -17,5 +17,8 @@ constexpr int VAULT_INVALID_SEARCH_PATTERN_ERROR = 12;
 
 constexpr int VAULT_GIT_INIT_ERROR = 31;
 constexpr int VAULT_GIT_SET_REMOTE_ERROR = 32;
+constexpr int VAULT_GIT_OPEN_ERROR = 33;
+constexpr int VAULT_GIT_ADD_ERROR = 34;
+constexpr int VAULT_GIT_COMMIT_ERROR = 35;
 
 #endif // RETCODES_H

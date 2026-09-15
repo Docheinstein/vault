@@ -7,10 +7,14 @@
 #include "commands/remove.h"
 #include "commands/search.h"
 #include "commands/show.h"
+
 #include "retcodes.h"
 
 #include "vault/init.h"
 
+#include "git/add.h"
+#include "git/init.h"
+#include "utils/vault.h"
 namespace {
 std::string get_error_message(int retcode) {
     switch (retcode) {
@@ -42,6 +46,12 @@ std::string get_error_message(int retcode) {
         return "ERROR: failed to init git repository";
     case VAULT_GIT_SET_REMOTE_ERROR:
         return "ERROR: failed to set git repository remote url";
+    case VAULT_GIT_OPEN_ERROR:
+        return "ERROR: failed to open git repository";
+    case VAULT_GIT_ADD_ERROR:
+        return "ERROR: failed to add file to git repository";
+    case VAULT_GIT_COMMIT_ERROR:
+        return "ERROR: failed to commit file to git repository";
     default:
         return "ERROR: unknown error";
     }

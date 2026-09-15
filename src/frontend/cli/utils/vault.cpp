@@ -1,6 +1,4 @@
-#include "utils/vaults.h"
-
-#include <iostream>
+#include "utils/vault.h"
 
 #include "vault/vault/secret.h"
 
@@ -36,4 +34,8 @@ std::vector<std::string> get_vault_secrets(const std::filesystem::path& vault_pa
     });
 
     return secrets_path;
+}
+
+std::string get_secret_short_name(const std::filesystem::path& secret_path) {
+    return secret_path.filename().string().substr(0, 6);
 }

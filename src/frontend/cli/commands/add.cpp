@@ -9,7 +9,14 @@
 #include "vault/vault/vault.h"
 
 #include "utils/cli.h"
-#include "utils/vaults.h"
+#include "utils/vault.h"
+
+#ifdef ENABLE_GIT
+#include "utils/git.h"
+
+#include "git/add.h"
+#include "git/commit.h"
+#endif
 
 #include "retcodes.h"
 
@@ -77,6 +84,20 @@ int command_add(int argc, char** argv) {
     if (!save_secret_result) {
         return VAULT_SECRET_SAVE_ERROR;
     }
+
+#ifdef ENABLE_GIT
+    if (has_git_repository(vault_path)) {
+        int git_retcode = vault_git_add(vault_path, *save_secret_result);
+        if (git_retcode != VAULT_SUCCESS) {
+            return git_retcode;
+        }
+
+        git_retcode = vault_git_commit(vault_path, "Add secret " + get_secret_short_name(*save_secret_result));
+        if (git_retcode != VAULT_SUCCESS) {
+            return git_retcode;
+        }
+    }
+#endif
 
     return VAULT_SUCCESS;
 }

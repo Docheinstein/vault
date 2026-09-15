@@ -11,7 +11,7 @@
 
 #include "utils/cli.h"
 #include "utils/colors.h"
-#include "utils/vaults.h"
+#include "utils/vault.h"
 
 #include "retcodes.h"
 

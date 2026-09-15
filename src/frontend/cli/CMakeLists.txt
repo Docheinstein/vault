@@ -20,16 +20,24 @@ target_sources(vault-cli PUBLIC
         utils/colors.h
         utils/strings.h
         utils/strings.cpp
-        utils/vaults.h
-        utils/vaults.cpp
+        utils/vault.h
+        utils/vault.cpp
         main.cpp
         retcodes.h
 )
 
 if (ENABLE_GIT)
     target_sources(vault-cli PUBLIC
+            git/add.h
+            git/add.cpp
+            git/commit.h
+            git/commit.cpp
             git/init.h
             git/init.cpp
+            git/remove.h
+            git/remove.cpp
+            utils/git.h
+            utils/git.cpp
     )
 endif()
 
