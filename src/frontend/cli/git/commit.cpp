@@ -10,14 +10,12 @@ int vault_git_commit(const std::filesystem::path& repo_path, const std::string& 
     git_repository* repo {};
     git_index* index {};
     git_tree* tree {};
-
     git_signature* signature {};
 
     git_oid tree_id {};
-
     git_oid new_commit_id {};
-
     git_oid parent_commit_id {};
+
     git_commit* parent_commit {};
 
     const git_commit* parents[1];
@@ -85,11 +83,11 @@ int vault_git_commit(const std::filesystem::path& repo_path, const std::string& 
     }
 
 epilogue:
-    git_repository_free(repo);
-    git_index_free(index);
+    git_commit_free(parent_commit);
     git_signature_free(signature);
     git_tree_free(tree);
-    git_commit_free(parent_commit);
+    git_index_free(index);
+    git_repository_free(repo);
 
     return retcode;
 }

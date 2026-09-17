@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "vault/init.h"
+
 #include "commands/add.h"
 #include "commands/edit.h"
 #include "commands/init.h"
@@ -8,13 +10,12 @@
 #include "commands/search.h"
 #include "commands/show.h"
 
+#ifdef ENABLE_GIT
+#include "commands/push.h"
+#endif
+
 #include "retcodes.h"
 
-#include "vault/init.h"
-
-#include "git/add.h"
-#include "git/init.h"
-#include "utils/vault.h"
 namespace {
 std::string get_error_message(int retcode) {
     switch (retcode) {
@@ -52,6 +53,10 @@ std::string get_error_message(int retcode) {
         return "ERROR: failed to add file to git repository";
     case VAULT_GIT_COMMIT_ERROR:
         return "ERROR: failed to commit file to git repository";
+    case VAULT_GIT_PUSH_ERROR:
+        return "ERROR: failed to push to remote";
+    case VAULT_GIT_SET_UPSTREAM_ERROR:
+        return "ERROR: failed to set upstream branch";
     default:
         return "ERROR: unknown error";
     }
@@ -60,7 +65,11 @@ std::string get_error_message(int retcode) {
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "usage: {add,create,destroy,list,remove,search,show,update}" << std::endl;
+#ifdef ENABLE_GIT
+        std::cout << "usage: {add,edit,init,list,push,remove,search,show}" << std::endl;
+#else
+        std::cout << "usage: {add,edit,init,list,remove,search,show}" << std::endl;
+#endif
         return VAULT_SUCCESS;
     }
 
@@ -77,18 +86,24 @@ int main(int argc, char** argv) {
 
     if (command == "add") {
         retcode = command_add(cmd_argc, cmd_argv);
+    } else if (command == "edit") {
+        retcode = command_edit(cmd_argc, cmd_argv);
     } else if (command == "init") {
         retcode = command_init(cmd_argc, cmd_argv);
     } else if (command == "list") {
         retcode = command_list(cmd_argc, cmd_argv);
-    } else if (command == "remove") {
+    }
+#ifdef ENABLE_GIT
+    else if (command == "push") {
+        retcode = command_push(cmd_argc, cmd_argv);
+    }
+#endif
+    else if (command == "remove") {
         retcode = command_remove(cmd_argc, cmd_argv);
     } else if (command == "search") {
         retcode = command_search(cmd_argc, cmd_argv);
     } else if (command == "show") {
         retcode = command_show(cmd_argc, cmd_argv);
-    } else if (command == "edit") {
-        retcode = command_edit(cmd_argc, cmd_argv);
     }
 
     if (retcode != VAULT_SUCCESS) {

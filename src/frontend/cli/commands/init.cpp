@@ -37,7 +37,14 @@ int command_init(int argc, char** argv) {
 
     const std::filesystem::path vault_master_file_path = get_vault_master_file_path(vault_path);
 
-    if (std::filesystem::exists(vault_master_file_path)) {
+    // Create the parent directories if needed.
+    if (!std::filesystem::is_directory(vault_path)) {
+        if (!std::filesystem::create_directories(vault_path)) {
+            return VAULT_VAULT_SAVE_ERROR;
+        }
+    }
+
+    if (std::filesystem::is_regular_file(vault_master_file_path)) {
         if (!read_yes_no_with_prompt("Vault already exists: overwrite? [y/N] ", false)) {
             return VAULT_SUCCESS;
         }
@@ -57,7 +64,7 @@ int command_init(int argc, char** argv) {
     // Eventually init git repository.
     if (!has_git_repository(vault_path)) {
         if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
-            const std::string git_repo_path = read_line_with_prompt("Git remote URL: ");
+            const std::string git_repo_path = read_line_with_prompt("Git URL: ");
 
             int git_retcode = vault_git_init(vault_path, git_repo_path);
             if (git_retcode != VAULT_SUCCESS) {

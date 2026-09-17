@@ -9,7 +9,8 @@ int vault_git_remove(const std::filesystem::path& repo_path, const std::filesyst
 
     git_repository* repo {};
     git_index* index {};
-    std::string relative_file_path;
+
+    std::string relative_file_path {};
 
     // Open the repository.
     int error = git_repository_open(&repo, repo_path.c_str());
@@ -41,8 +42,8 @@ int vault_git_remove(const std::filesystem::path& repo_path, const std::filesyst
     }
 
 epilogue:
-    git_repository_free(repo);
     git_index_free(index);
+    git_repository_free(repo);
 
     return retcode;
 }

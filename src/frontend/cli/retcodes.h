@@ -20,5 +20,7 @@ constexpr int VAULT_GIT_SET_REMOTE_ERROR = 32;
 constexpr int VAULT_GIT_OPEN_ERROR = 33;
 constexpr int VAULT_GIT_ADD_ERROR = 34;
 constexpr int VAULT_GIT_COMMIT_ERROR = 35;
+constexpr int VAULT_GIT_PUSH_ERROR = 36;
+constexpr int VAULT_GIT_SET_UPSTREAM_ERROR = 37;
 
 #endif // RETCODES_H
