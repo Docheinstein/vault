@@ -11,22 +11,25 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
 
     git_repository* repo {};
     git_remote* remote {};
-    git_reference* head {};
-    git_reference* tracking_ref {};
-
-    const char* head_name {};
-
-    git_strarray refspecs {};
-    std::string refspec_str {};
-    char* refspec {};
 
     git_push_options push_options {};
 
-    std::string head_shorthand {};
-    std::string head_tracking_refname {};
-    std::string upstream_spec {};
+    git_reference* head {};
+    git_reference* upstream_head {};
 
-    git_buf upstream_name {};
+    const git_oid* head_oid {};
+
+    const char* head_refname {};
+    std::string head_shorthand {};
+
+    std::string upstream_refname {};
+    std::string upstream_shorthand {};
+
+    git_buf configured_upstream_refname {};
+
+    git_strarray refspecs {};
+    std::string refspec {};
+    char* refspec_cstr {};
 
     // Open the repository.
     int error = git_repository_open(&repo, repo_path.c_str());
@@ -35,7 +38,7 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
         goto epilogue;
     }
 
-    // Fetch the remote.
+    // Retrieve the remote.
     error = git_remote_lookup(&remote, repo, remote_name.c_str());
     if (error < 0) {
         retcode = VAULT_GIT_PUSH_ERROR;
@@ -49,11 +52,13 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
         goto epilogue;
     }
 
-    head_name = git_reference_name(head);
+    head_refname = git_reference_name(head);
+    head_shorthand = git_reference_shorthand(head);
+    head_oid = git_reference_target(head);
 
-    refspec_str = std::string {head_name};
-    refspec = refspec_str.data();
-    refspecs.strings = &refspec;
+    refspec = std::string {head_refname};
+    refspec_cstr = refspec.data();
+    refspecs.strings = &refspec_cstr;
     refspecs.count = 1;
 
     error = git_push_options_init(&push_options, GIT_PUSH_OPTIONS_VERSION);
@@ -72,20 +77,18 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
     }
 
     // Set the branch upstream (mirrors `git push --set-upstream`), if not done yet.
-    error = git_branch_upstream_name(&upstream_name, repo, head_name);
+    error = git_branch_upstream_name(&configured_upstream_refname, repo, head_refname);
     if (error == GIT_ENOTFOUND) {
-        head_shorthand = git_reference_shorthand(head);
-        head_tracking_refname = "refs/remotes/" + remote_name + "/" + head_shorthand;
+        upstream_refname = "refs/remotes/" + remote_name + "/" + head_shorthand;
 
-        error = git_reference_create(&tracking_ref, repo, head_tracking_refname.c_str(), git_reference_target(head), 1,
-                                     nullptr);
+        error = git_reference_create(&upstream_head, repo, upstream_refname.c_str(), head_oid, 1, nullptr);
         if (error < 0) {
             retcode = VAULT_GIT_PUSH_ERROR;
             goto epilogue;
         }
 
-        upstream_spec = remote_name + "/" + head_shorthand;
-        error = git_branch_set_upstream(head, upstream_spec.c_str());
+        upstream_shorthand = remote_name + "/" + head_shorthand;
+        error = git_branch_set_upstream(head, upstream_shorthand.c_str());
         if (error < 0) {
             retcode = VAULT_GIT_PUSH_ERROR;
         }
@@ -94,8 +97,8 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
     }
 
 epilogue:
-    git_buf_dispose(&upstream_name);
-    git_reference_free(tracking_ref);
+    git_buf_dispose(&configured_upstream_refname);
+    git_reference_free(upstream_head);
     git_reference_free(head);
     git_remote_free(remote);
     git_repository_free(repo);

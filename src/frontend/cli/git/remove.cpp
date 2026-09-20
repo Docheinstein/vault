@@ -19,7 +19,7 @@ int vault_git_remove(const std::filesystem::path& repo_path, const std::filesyst
         goto epilogue;
     }
 
-    // Fetch the index file for the repository.
+    // Retrieve the index of the repository.
     error = git_repository_index(&index, repo);
     if (error < 0) {
         retcode = VAULT_GIT_REMOVE_ERROR;
