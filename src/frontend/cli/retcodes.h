@@ -17,11 +17,12 @@ constexpr int VAULT_INVALID_SEARCH_PATTERN_ERROR = 12;
 
 #ifdef ENABLE_GIT
 constexpr int VAULT_GIT_ADD_ERROR = 101;
-constexpr int VAULT_GIT_COMMIT_ERROR = 102;
-constexpr int VAULT_GIT_INIT_ERROR = 103;
-constexpr int VAULT_GIT_PULL_ERROR = 104;
-constexpr int VAULT_GIT_PUSH_ERROR = 105;
-constexpr int VAULT_GIT_REMOVE_ERROR = 106;
+constexpr int VAULT_GIT_CLONE_ERROR = 102;
+constexpr int VAULT_GIT_COMMIT_ERROR = 103;
+constexpr int VAULT_GIT_INIT_ERROR = 104;
+constexpr int VAULT_GIT_PULL_ERROR = 105;
+constexpr int VAULT_GIT_PUSH_ERROR = 106;
+constexpr int VAULT_GIT_REMOVE_ERROR = 107;
 #endif
 
 #endif // RETCODES_H

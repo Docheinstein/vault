@@ -11,6 +11,7 @@
 #include "commands/show.h"
 
 #ifdef ENABLE_GIT
+#include "commands/clone.h"
 #include "commands/pull.h"
 #include "commands/push.h"
 #endif
@@ -47,6 +48,8 @@ std::string get_error_code_message(int error_code) {
 #ifdef ENABLE_GIT
     case VAULT_GIT_ADD_ERROR:
         return "ERROR: failed to add file to index";
+    case VAULT_GIT_CLONE_ERROR:
+        return "ERROR: failed to clone remote";
     case VAULT_GIT_COMMIT_ERROR:
         return "ERROR: failed to commit";
     case VAULT_GIT_INIT_ERROR:
@@ -67,7 +70,7 @@ std::string get_error_code_message(int error_code) {
 int main(int argc, char** argv) {
     if (argc < 2) {
 #ifdef ENABLE_GIT
-        std::cout << "usage: {add,edit,init,list,pull,push,remove,search,show}" << std::endl;
+        std::cout << "usage: {add,clone,edit,init,list,pull,push,remove,search,show}" << std::endl;
 #else
         std::cout << "usage: {add,edit,init,list,remove,search,show}" << std::endl;
 #endif
@@ -87,7 +90,13 @@ int main(int argc, char** argv) {
 
     if (command == "add") {
         result = command_add(cmd_argc, cmd_argv);
-    } else if (command == "edit") {
+    }
+#ifdef ENABLE_GIT
+    else if (command == "clone") {
+        result = command_clone(cmd_argc, cmd_argv);
+    }
+#endif
+    else if (command == "edit") {
         result = command_edit(cmd_argc, cmd_argv);
     } else if (command == "init") {
         result = command_init(cmd_argc, cmd_argv);

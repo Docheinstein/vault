@@ -29,12 +29,16 @@ target_sources(vault-cli PUBLIC
 
 if (ENABLE_GIT)
     target_sources(vault-cli PUBLIC
+            commands/clone.h
+            commands/clone.cpp
             commands/pull.h
             commands/pull.cpp
             commands/push.h
             commands/push.cpp
             git/add.h
             git/add.cpp
+            git/clone.h
+            git/clone.cpp
             git/commit.h
             git/commit.cpp
             git/init.h

@@ -64,9 +64,9 @@ VaultCommandResult command_init(int argc, char** argv) {
     // Eventually init git repository.
     if (!has_git_repository(vault_path)) {
         if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
-            const std::string git_repo_path = read_line_with_prompt("Git URL: ");
+            const std::string git_remote_url = read_line_with_prompt("URL: ");
 
-            int git_retcode = vault_git_init(vault_path, git_repo_path);
+            int git_retcode = vault_git_init(vault_path, git_remote_url);
             if (git_retcode != VAULT_SUCCESS) {
                 return {git_retcode, get_git_error()};
             }

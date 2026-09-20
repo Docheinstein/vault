@@ -5,7 +5,7 @@
 #include "utils/cli.h"
 
 bool has_git_repository(const std::filesystem::path& path) {
-    git_repository* repo;
+    git_repository* repo {};
     int error = git_repository_open(&repo, path.c_str());
     git_repository_free(repo);
     return error >= 0;
@@ -38,5 +38,5 @@ std::string get_commit_short_name(const std::string& commit_name) {
 }
 
 std::string get_git_error() {
-    return git_error_last() ? git_error_last()->message : nullptr;
+    return git_error_last() ? git_error_last()->message : std::string {};
 }
