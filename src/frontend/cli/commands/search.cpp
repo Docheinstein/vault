@@ -13,7 +13,7 @@
 #include "utils/colors.h"
 #include "utils/vault.h"
 
-#include "retcodes.h"
+#include "result.h"
 
 namespace {
 const unsigned char* search_string_case_insensitive(const unsigned char* haystack, const size_t haystack_len,
@@ -65,7 +65,7 @@ void print_highlight_match_case_insensitive(const unsigned char* haystack, const
 
 } // namespace
 
-int command_search(int argc, char** argv) {
+VaultCommandResult command_search(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
         std::optional<std::string> search_pattern {};

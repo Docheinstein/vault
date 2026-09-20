@@ -15,12 +15,13 @@ constexpr int VAULT_SECRET_REMOVE_ERROR = 10;
 constexpr int VAULT_INVALID_ID_ERROR = 11;
 constexpr int VAULT_INVALID_SEARCH_PATTERN_ERROR = 12;
 
-constexpr int VAULT_GIT_INIT_ERROR = 31;
-constexpr int VAULT_GIT_SET_REMOTE_ERROR = 32;
-constexpr int VAULT_GIT_OPEN_ERROR = 33;
-constexpr int VAULT_GIT_ADD_ERROR = 34;
-constexpr int VAULT_GIT_COMMIT_ERROR = 35;
-constexpr int VAULT_GIT_PUSH_ERROR = 36;
-constexpr int VAULT_GIT_SET_UPSTREAM_ERROR = 37;
+#ifdef ENABLE_GIT
+constexpr int VAULT_GIT_ADD_ERROR = 101;
+constexpr int VAULT_GIT_COMMIT_ERROR = 102;
+constexpr int VAULT_GIT_INIT_ERROR = 103;
+constexpr int VAULT_GIT_PULL_ERROR = 104;
+constexpr int VAULT_GIT_PUSH_ERROR = 105;
+constexpr int VAULT_GIT_REMOVE_ERROR = 106;
+#endif
 
 #endif // RETCODES_H

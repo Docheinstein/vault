@@ -31,7 +31,7 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
     // Open the repository.
     int error = git_repository_open(&repo, repo_path.c_str());
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_PUSH_ERROR;
         goto epilogue;
     }
 
@@ -80,17 +80,17 @@ int vault_git_push(const std::filesystem::path& repo_path, const std::string& re
         error = git_reference_create(&tracking_ref, repo, head_tracking_refname.c_str(), git_reference_target(head), 1,
                                      nullptr);
         if (error < 0) {
-            retcode = VAULT_GIT_SET_UPSTREAM_ERROR;
+            retcode = VAULT_GIT_PUSH_ERROR;
             goto epilogue;
         }
 
         upstream_spec = remote_name + "/" + head_shorthand;
         error = git_branch_set_upstream(head, upstream_spec.c_str());
         if (error < 0) {
-            retcode = VAULT_GIT_SET_UPSTREAM_ERROR;
+            retcode = VAULT_GIT_PUSH_ERROR;
         }
     } else if (error < 0) {
-        retcode = VAULT_GIT_SET_UPSTREAM_ERROR;
+        retcode = VAULT_GIT_PUSH_ERROR;
     }
 
 epilogue:

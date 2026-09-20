@@ -15,14 +15,14 @@ int vault_git_remove(const std::filesystem::path& repo_path, const std::filesyst
     // Open the repository.
     int error = git_repository_open(&repo, repo_path.c_str());
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_REMOVE_ERROR;
         goto epilogue;
     }
 
     // Fetch the index file for the repository.
     error = git_repository_index(&index, repo);
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_REMOVE_ERROR;
         goto epilogue;
     }
 
@@ -31,14 +31,14 @@ int vault_git_remove(const std::filesystem::path& repo_path, const std::filesyst
     // Remove the file from the index.
     error = git_index_remove_bypath(index, relative_file_path.c_str());
     if (error < 0) {
-        retcode = VAULT_GIT_ADD_ERROR;
+        retcode = VAULT_GIT_REMOVE_ERROR;
         goto epilogue;
     }
 
     // Write the index to disk.
     error = git_index_write(index);
     if (error < 0) {
-        retcode = VAULT_GIT_ADD_ERROR;
+        retcode = VAULT_GIT_REMOVE_ERROR;
     }
 
 epilogue:

@@ -12,9 +12,9 @@
 #include "utils/colors.h"
 #include "utils/vault.h"
 
-#include "retcodes.h"
+#include "result.h"
 
-int command_show(int argc, char** argv) {
+VaultCommandResult command_show(int argc, char** argv) {
     struct {
         std::optional<uint32_t> id {};
         std::optional<std::string> vault_path {};

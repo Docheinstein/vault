@@ -18,9 +18,9 @@
 #include "git/commit.h"
 #endif
 
-#include "retcodes.h"
+#include "result.h"
 
-int command_add(int argc, char** argv) {
+VaultCommandResult command_add(int argc, char** argv) {
     struct {
         bool multiline {};
         std::optional<std::string> vault_path {};
@@ -89,12 +89,12 @@ int command_add(int argc, char** argv) {
     if (has_git_repository(vault_path)) {
         int git_retcode = vault_git_add(vault_path, *save_secret_result);
         if (git_retcode != VAULT_SUCCESS) {
-            return git_retcode;
+            return {git_retcode, get_git_error()};
         }
 
         git_retcode = vault_git_commit(vault_path, "Add secret " + get_secret_short_name(*save_secret_result));
         if (git_retcode != VAULT_SUCCESS) {
-            return git_retcode;
+            return {git_retcode, get_git_error()};
         }
     }
 #endif

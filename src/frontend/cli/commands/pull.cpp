@@ -1,4 +1,4 @@
-#include "commands/push.h"
+#include "commands/pull.h"
 
 #include <optional>
 #include <string>
@@ -8,11 +8,11 @@
 #include "utils/git.h"
 #include "utils/vault.h"
 
-#include "git/push.h"
+#include "git/pull.h"
 
 #include "result.h"
 
-VaultCommandResult command_push(int argc, char** argv) {
+VaultCommandResult command_pull(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
     } args;
@@ -27,13 +27,11 @@ VaultCommandResult command_push(int argc, char** argv) {
     const std::filesystem::path vault_path =
         args.vault_path.has_value() ? std::filesystem::path {*args.vault_path} : get_default_vault_path();
 
-    const std::filesystem::path vault_master_file_path = get_vault_master_file_path(vault_path);
-
     if (!has_git_repository(vault_path)) {
-        return VAULT_GIT_PUSH_ERROR;
+        return VAULT_GIT_PULL_ERROR;
     }
 
-    const int git_retcode = vault_git_push(vault_path);
+    const int git_retcode = vault_git_pull(vault_path);
     if (git_retcode != VAULT_SUCCESS) {
         return {git_retcode, get_git_error()};
     }

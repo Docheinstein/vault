@@ -19,9 +19,9 @@ int git_credentials_callback(git_credential** out, const char* url, const char* 
     }
 
     const std::string username =
-        username_from_url != nullptr ? std::string(username_from_url) : read_line_with_prompt("Git Username: ");
+        username_from_url != nullptr ? std::string(username_from_url) : read_line_with_prompt("Username: ");
 
-    auto password = read_hidden_line_with_prompt_secure("Git Password: ");
+    auto password = read_hidden_line_with_prompt_secure("Password: ");
     if (!password) {
         return GIT_EUSER;
     }
@@ -31,4 +31,12 @@ int git_credentials_callback(git_credential** out, const char* url, const char* 
 
     return git_credential_userpass_plaintext_new(out, username.c_str(),
                                                  reinterpret_cast<const char*>(password->data()));
+}
+
+std::string get_commit_short_name(const std::string& commit_name) {
+    return commit_name.size() >= 6 ? commit_name.substr(0, 6) : commit_name;
+}
+
+std::string get_git_error() {
+    return git_error_last() ? git_error_last()->message : nullptr;
 }

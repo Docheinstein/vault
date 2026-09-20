@@ -18,9 +18,9 @@
 #include "git/remove.h"
 #endif
 
-#include "retcodes.h"
+#include "result.h"
 
-int command_remove(int argc, char** argv) {
+VaultCommandResult command_remove(int argc, char** argv) {
     struct {
         std::optional<uint32_t> id {};
         std::optional<std::string> vault_path {};
@@ -76,12 +76,12 @@ int command_remove(int argc, char** argv) {
     if (has_git_repository(vault_path)) {
         int git_retcode = vault_git_remove(vault_path, secret_path);
         if (git_retcode != VAULT_SUCCESS) {
-            return git_retcode;
+            return {git_retcode, get_git_error()};
         }
 
         git_retcode = vault_git_commit(vault_path, "Remove secret " + get_secret_short_name(secret_path));
         if (git_retcode != VAULT_SUCCESS) {
-            return git_retcode;
+            return {git_retcode, get_git_error()};
         }
     }
 #endif

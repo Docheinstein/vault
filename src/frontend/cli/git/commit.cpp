@@ -24,21 +24,21 @@ int vault_git_commit(const std::filesystem::path& repo_path, const std::string& 
     // Open the repository.
     int error = git_repository_open(&repo, repo_path.c_str());
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_COMMIT_ERROR;
         goto epilogue;
     }
 
     // Fetch the index file for the repository.
     error = git_repository_index(&index, repo);
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_COMMIT_ERROR;
         goto epilogue;
     }
 
     // Obtain our signature.
     error = git_signature_default(&signature, repo);
     if (error < 0) {
-        retcode = VAULT_GIT_OPEN_ERROR;
+        retcode = VAULT_GIT_COMMIT_ERROR;
         goto epilogue;
     }
 

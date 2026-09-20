@@ -9,6 +9,7 @@ target_sources(vault-cli PUBLIC
         commands/list.cpp
         commands/remove.h
         commands/remove.cpp
+        commands/result.h
         commands/search.h
         commands/search.cpp
         commands/show.h
@@ -28,6 +29,8 @@ target_sources(vault-cli PUBLIC
 
 if (ENABLE_GIT)
     target_sources(vault-cli PUBLIC
+            commands/pull.h
+            commands/pull.cpp
             commands/push.h
             commands/push.cpp
             git/add.h
@@ -36,6 +39,8 @@ if (ENABLE_GIT)
             git/commit.cpp
             git/init.h
             git/init.cpp
+            git/pull.h
+            git/pull.cpp
             git/push.h
             git/push.cpp
             git/remove.h

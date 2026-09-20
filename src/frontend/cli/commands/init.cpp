@@ -18,9 +18,9 @@
 #include "git/init.h"
 #endif
 
-#include "retcodes.h"
+#include "result.h"
 
-int command_init(int argc, char** argv) {
+VaultCommandResult command_init(int argc, char** argv) {
     struct {
         std::optional<std::string> vault_path {};
     } args;
@@ -68,18 +68,18 @@ int command_init(int argc, char** argv) {
 
             int git_retcode = vault_git_init(vault_path, git_repo_path);
             if (git_retcode != VAULT_SUCCESS) {
-                return git_retcode;
+                return {git_retcode, get_git_error()};
             }
 
             // Add and commit the vault master file.
             git_retcode = vault_git_add(vault_path, vault_master_file_path);
             if (git_retcode != VAULT_SUCCESS) {
-                return git_retcode;
+                return {git_retcode, get_git_error()};
             }
 
             git_retcode = vault_git_commit(vault_path, "Initialize vault");
             if (git_retcode != VAULT_SUCCESS) {
-                return git_retcode;
+                return {git_retcode, get_git_error()};
             }
         }
     }

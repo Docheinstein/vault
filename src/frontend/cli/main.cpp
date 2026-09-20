@@ -11,14 +11,15 @@
 #include "commands/show.h"
 
 #ifdef ENABLE_GIT
+#include "commands/pull.h"
 #include "commands/push.h"
 #endif
 
 #include "retcodes.h"
 
 namespace {
-std::string get_error_message(int retcode) {
-    switch (retcode) {
+std::string get_error_code_message(int error_code) {
+    switch (error_code) {
     case VAULT_BOOTSTRAP_FAILED:
         return "ERROR: failed to initialize vault libraries";
     case VAULT_UNRECOGNIZED_COMMAND:
@@ -43,20 +44,20 @@ std::string get_error_message(int retcode) {
         return "ERROR: invalid id";
     case VAULT_INVALID_SEARCH_PATTERN_ERROR:
         return "ERROR: invalid search pattern";
-    case VAULT_GIT_INIT_ERROR:
-        return "ERROR: failed to init git repository";
-    case VAULT_GIT_SET_REMOTE_ERROR:
-        return "ERROR: failed to set git repository remote url";
-    case VAULT_GIT_OPEN_ERROR:
-        return "ERROR: failed to open git repository";
+#ifdef ENABLE_GIT
     case VAULT_GIT_ADD_ERROR:
-        return "ERROR: failed to add file to git repository";
+        return "ERROR: failed to add file to index";
     case VAULT_GIT_COMMIT_ERROR:
-        return "ERROR: failed to commit file to git repository";
+        return "ERROR: failed to commit";
+    case VAULT_GIT_INIT_ERROR:
+        return "ERROR: failed to initialize repository";
+    case VAULT_GIT_PULL_ERROR:
+        return "ERROR: failed to pull from remote";
     case VAULT_GIT_PUSH_ERROR:
         return "ERROR: failed to push to remote";
-    case VAULT_GIT_SET_UPSTREAM_ERROR:
-        return "ERROR: failed to set upstream branch";
+    case VAULT_GIT_REMOVE_ERROR:
+        return "ERROR: failed to remove file from index";
+#endif
     default:
         return "ERROR: unknown error";
     }
@@ -66,7 +67,7 @@ std::string get_error_message(int retcode) {
 int main(int argc, char** argv) {
     if (argc < 2) {
 #ifdef ENABLE_GIT
-        std::cout << "usage: {add,edit,init,list,push,remove,search,show}" << std::endl;
+        std::cout << "usage: {add,edit,init,list,pull,push,remove,search,show}" << std::endl;
 #else
         std::cout << "usage: {add,edit,init,list,remove,search,show}" << std::endl;
 #endif
@@ -74,7 +75,7 @@ int main(int argc, char** argv) {
     }
 
     if (!vault_init()) {
-        std::cerr << get_error_message(VAULT_BOOTSTRAP_FAILED) << std::endl;
+        std::cerr << get_error_code_message(VAULT_BOOTSTRAP_FAILED) << std::endl;
         return VAULT_BOOTSTRAP_FAILED;
     }
 
@@ -82,35 +83,41 @@ int main(int argc, char** argv) {
     const int cmd_argc = argc - 2;
     char** const cmd_argv = &argv[2];
 
-    int retcode = VAULT_UNRECOGNIZED_COMMAND;
+    VaultCommandResult result = VAULT_UNRECOGNIZED_COMMAND;
 
     if (command == "add") {
-        retcode = command_add(cmd_argc, cmd_argv);
+        result = command_add(cmd_argc, cmd_argv);
     } else if (command == "edit") {
-        retcode = command_edit(cmd_argc, cmd_argv);
+        result = command_edit(cmd_argc, cmd_argv);
     } else if (command == "init") {
-        retcode = command_init(cmd_argc, cmd_argv);
+        result = command_init(cmd_argc, cmd_argv);
     } else if (command == "list") {
-        retcode = command_list(cmd_argc, cmd_argv);
+        result = command_list(cmd_argc, cmd_argv);
     }
 #ifdef ENABLE_GIT
-    else if (command == "push") {
-        retcode = command_push(cmd_argc, cmd_argv);
+    else if (command == "pull") {
+        result = command_pull(cmd_argc, cmd_argv);
+    } else if (command == "push") {
+        result = command_push(cmd_argc, cmd_argv);
     }
 #endif
     else if (command == "remove") {
-        retcode = command_remove(cmd_argc, cmd_argv);
+        result = command_remove(cmd_argc, cmd_argv);
     } else if (command == "search") {
-        retcode = command_search(cmd_argc, cmd_argv);
+        result = command_search(cmd_argc, cmd_argv);
     } else if (command == "show") {
-        retcode = command_show(cmd_argc, cmd_argv);
+        result = command_show(cmd_argc, cmd_argv);
     }
 
-    if (retcode != VAULT_SUCCESS) {
-        std::cerr << get_error_message(retcode) << std::endl;
+    if (result.code != VAULT_SUCCESS) {
+        std::cerr << get_error_code_message(result.code);
+        if (!result.message.empty()) {
+            std::cerr << ": " << result.message;
+        }
+        std::cerr << std::endl;
     }
 
     vault_deinit();
 
-    return retcode;
+    return result.code;
 }

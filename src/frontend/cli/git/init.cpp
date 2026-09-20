@@ -23,7 +23,7 @@ int vault_git_init(const std::filesystem::path& repo_path, const std::string& re
     if (!remote_url.empty()) {
         error = git_remote_create(&remote, repo, remote_name.c_str(), remote_url.c_str());
         if (error < 0) {
-            retcode = VAULT_GIT_SET_REMOTE_ERROR;
+            retcode = VAULT_GIT_INIT_ERROR;
         }
     }
 
