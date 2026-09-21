@@ -38,6 +38,7 @@ if (ENABLE_GIT)
     set(BUILD_FUZZERS OFF CACHE BOOL   "Build the fuzz targets" FORCE)
 
     set(USE_HTTPS OpenSSL)
+    set(USE_SSH exec) # requires ssh at runtime
     set(USE_BUNDLED_ZLIB ON)
 
     find_package(OpenSSL REQUIRED)
