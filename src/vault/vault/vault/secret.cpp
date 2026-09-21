@@ -197,7 +197,7 @@ LoadSecretResult load_secret(const std::filesystem::path& secret_path, const Vau
     }
 
     // File validity checks.
-    if (read_result->size() <= SECRET_MINIMUM_FILE_SIZE) {
+    if (read_result->size() < SECRET_MINIMUM_FILE_SIZE) {
         return std::unexpected {LoadSecretError::InvalidFile};
     }
 
