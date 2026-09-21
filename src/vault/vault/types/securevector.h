@@ -61,6 +61,10 @@ public:
         size_ += size;
     }
 
+    void append(const char* data) {
+        append(reinterpret_cast<const unsigned char*>(data), strlen(data));
+    }
+
     void reserve(size_t new_capacity) {
         if (capacity_ < new_capacity) {
             if (capacity_ == 0) {

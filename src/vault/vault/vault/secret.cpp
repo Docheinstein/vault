@@ -20,18 +20,19 @@
  * |--------------------------------------------------|
  * | Magic Bytes                 |    0:3  |       4  |
  * | Encryption Algorithm        |    4:4  |       1  |
- * | Unused                      |   5:15  |      11  |
+ * | Modification Time           |   5:12  |       8  |
+ * | Unused                      |  13:31  |      19  |
  * |--------------------------------------------------|
- * | Encryption Data      (*1*)  |  16:63  |      48  |
+ * | Encryption Data      (*1*)  |  32:63  |      32  |
  * +--------------------------------------------------+
  *
  * +--------------------------------------------------+
- * | (*1*)        Encryption Data (48 bytes)          |
+ * | (*1*)        Encryption Data (32 bytes)          |
  * |--------------------------------------------------|
  * | Description                 |  Range  | # Bytes  |
  * |--------------------------------------------------|
  * | Nonce                        |  0:23  |      24  |
- * | Unused                       | 24:47  |      24  |
+ * | Unused                       | 24:31  |      12  |
  * +--------------------------------------------------+
  *
  *
@@ -74,11 +75,16 @@ constexpr unsigned char SECRET_MAGIC_BYTES[SECRET_MAGIC_BYTES_SIZE] = "SEC";
 constexpr unsigned long long SECRET_HEADER_SIZE = 64;
 
 constexpr unsigned long long SECRET_HEADER_PROLOGUE_BEGIN_POS = 0;
-constexpr unsigned long long SECRET_HEADER_ENCRYPTION_BEGIN_POS = 16;
 
 constexpr unsigned long long SECRET_HEADER_PROLOGUE_MAGIC_BYTES_POS = SECRET_HEADER_PROLOGUE_BEGIN_POS;
 constexpr unsigned long long SECRET_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS =
     SECRET_HEADER_PROLOGUE_MAGIC_BYTES_POS + SECRET_MAGIC_BYTES_SIZE;
+
+constexpr unsigned long long SECRET_HEADER_MODIFICATION_TIME_POS = SECRET_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS + 1;
+
+constexpr unsigned long long SECRET_HEADER_MODIFICATION_TIME_SIZE = 8;
+
+constexpr unsigned long long SECRET_HEADER_ENCRYPTION_BEGIN_POS = 32;
 
 constexpr unsigned long long SECRET_HEADER_ENCRYPTION_NONCE_POS = SECRET_HEADER_ENCRYPTION_BEGIN_POS;
 
@@ -106,6 +112,10 @@ uint64_t checksum(const unsigned char* buffer, const size_t length) {
         h = h * 31 + buffer[i];
     }
     return h;
+}
+
+std::time_t get_current_time() {
+    return std::time(nullptr);
 }
 } // namespace
 
@@ -165,10 +175,16 @@ SaveSecretResult save_secret(const std::filesystem::path& vault_path, const Vaul
     unsigned char* const header = secret_data.data();
 
     // Prologue (32 bytes).
+    // Magic bytes.
     memset(header, 0, SECRET_HEADER_SIZE);
     memcpy(header + SECRET_HEADER_PROLOGUE_MAGIC_BYTES_POS, SECRET_MAGIC_BYTES, SECRET_MAGIC_BYTES_SIZE);
 
+    // Algorithms used.
     header[SECRET_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS] = ENCRYPTION_ALGO;
+
+    // Modification time.
+    const auto current_time = get_current_time();
+    memcpy(header + SECRET_HEADER_MODIFICATION_TIME_POS, &current_time, SECRET_HEADER_MODIFICATION_TIME_SIZE);
 
     // Encryption Data (48 bytes).
     memcpy(header + SECRET_HEADER_ENCRYPTION_NONCE_POS, encryption_nonce, ENCRYPTION_NONCE_SIZE);
@@ -230,8 +246,14 @@ LoadSecretResult load_secret(const std::filesystem::path& secret_path, const Vau
     uint64_t secret_name_size = 0;
     memcpy(&secret_name_size, output.data(), SECRET_NAME_SIZE_SIZE);
 
-    // Build the secret by retrieving the name and the content from the data.
+    // Build the secret.
     Secret secret {};
+
+    // Modification time.
+    memcpy(&secret.modification_time, secret_data + SECRET_HEADER_MODIFICATION_TIME_POS,
+           SECRET_HEADER_MODIFICATION_TIME_SIZE);
+
+    // Retrieving the name and the content from the data.
     secret.name.append(output.data() + SECRET_NAME_SIZE_SIZE, secret_name_size);
 
     const size_t secret_content_size = output.size() - SECRET_NAME_SIZE_SIZE - secret_name_size;

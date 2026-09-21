@@ -9,6 +9,8 @@
 struct Secret {
     SecureString name {};
     SecureString content {};
+
+    std::time_t modification_time {};
 };
 
 enum class LoadSecretError { ReadError, InvalidFile, DecryptionFailed };

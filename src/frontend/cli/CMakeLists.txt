@@ -21,6 +21,8 @@ target_sources(vault-cli PUBLIC
         utils/colors.h
         utils/strings.h
         utils/strings.cpp
+        utils/ui.h
+        utils/ui.cpp
         utils/vault.h
         utils/vault.cpp
         main.cpp

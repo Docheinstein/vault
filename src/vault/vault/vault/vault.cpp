@@ -133,9 +133,11 @@ SaveVaultResult save_vault(const std::filesystem::path& path, const SecureString
     unsigned char* const header = vault_data.data();
 
     // Prologue (32 bytes).
+    // Magic bytes.
     memset(header, 0, VAULT_HEADER_SIZE);
     memcpy(header + VAULT_HEADER_PROLOGUE_MAGIC_BYTES_POS, VAULT_MAGIC_BYTES, VAULT_MAGIC_BYTES_SIZE);
 
+    // Algorithms used.
     header[VAULT_HEADER_PROLOGUE_PWHASH_ALGO_POS] = PWHASH_ALGO;
     header[VAULT_HEADER_PROLOGUE_ENCRYPTION_ALGO_POS] = ENCRYPTION_ALGO;
 
