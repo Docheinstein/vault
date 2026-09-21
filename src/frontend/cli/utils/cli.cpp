@@ -6,10 +6,6 @@
 
 #include "utils/strings.h"
 
-namespace {
-constexpr size_t STDIN_READ_CHUNK_SIZE = 256;
-}
-
 std::string read_line() {
     std::string text {};
     getline(std::cin, text);
@@ -44,13 +40,10 @@ std::optional<SecureString> read_line_secure() {
     SecureString text {};
 
     while (true) {
-        // Reserve space for the next read.
-        text.reserve(text.size() + STDIN_READ_CHUNK_SIZE);
+        unsigned char c {};
 
-        unsigned char* const buffer = text.data() + text.size();
-
-        // Read the next 256 bytes.
-        const ssize_t ret = read(STDIN_FILENO, buffer, STDIN_READ_CHUNK_SIZE);
+        // Read the next byte.
+        const ssize_t ret = read(STDIN_FILENO, &c, 1);
 
         if (ret < 0) {
             // Read error.
@@ -62,35 +55,30 @@ std::optional<SecureString> read_line_secure() {
             break;
         }
 
-        // Actually update the string size.
-        text.resize(text.size() + ret);
-
         // Stop as soon as new line is found.
-        if (text.data()[text.size() - 1] == '\n') {
-            text.resize(text.size() - 1);
+        if (c == '\n') {
             break;
         }
 
-        if (static_cast<size_t>(ret) < STDIN_READ_CHUNK_SIZE) {
-            // No more bytes to read.
-            break;
-        }
+        text.append(&c, 1);
     }
 
     return text;
 }
 
 std::optional<SecureString> read_multiline_secure() {
+    static constexpr size_t READ_CHUNK_SIZE = 256;
+
     SecureString text {};
 
     while (true) {
         // Reserve space for the next read.
-        text.reserve(text.size() + STDIN_READ_CHUNK_SIZE);
+        text.reserve(text.size() + READ_CHUNK_SIZE);
 
         unsigned char* const buffer = text.data() + text.size();
 
         // Read the next 256 bytes.
-        const ssize_t ret = read(STDIN_FILENO, buffer, STDIN_READ_CHUNK_SIZE);
+        const ssize_t ret = read(STDIN_FILENO, buffer, READ_CHUNK_SIZE);
 
         if (ret < 0) {
             // Read error.
