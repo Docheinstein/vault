@@ -110,7 +110,8 @@ VaultCommandResult command_search(int argc, char** argv) {
 
         const auto secret = load_secret(secret_path, *vault_key);
         if (!secret) {
-            return VAULT_SECRET_LOAD_ERROR;
+            // Silently skip corrupted entries.
+            continue;
         }
 
         if (search_string_case_insensitive(secret->name.data(), secret->name.size(), search_pattern_data,

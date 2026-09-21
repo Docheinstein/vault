@@ -61,11 +61,13 @@ VaultCommandResult command_show(int argc, char** argv) {
         secure_cout << secret->content << std::endl;
     } else {
         for (uint32_t i = 0; i < secrets_paths.size(); i++) {
-            const auto& secret_path = secrets_paths[i];
+            const auto& secret_path_str = secrets_paths[i];
+            const auto& secret_path = std::filesystem::path {secret_path_str};
 
             auto secret = load_secret(secret_path, *vault_key);
             if (!secret) {
-                return VAULT_SECRET_LOAD_ERROR;
+                secure_cout << i << ". " << secret_path.filename() << ": corrupted entry" << std::endl;
+                continue;
             }
 
             secure_cout << i << ". " << CYAN << secret->name << RESET << std::endl;

@@ -44,11 +44,13 @@ VaultCommandResult command_list(int argc, char** argv) {
     const std::vector<std::string> secrets_paths = get_vault_secrets(vault_path);
 
     for (uint32_t i = 0; i < secrets_paths.size(); i++) {
-        const auto& secret_path = secrets_paths[i];
+        const auto& secret_path_str = secrets_paths[i];
+        const auto& secret_path = std::filesystem::path {secret_path_str};
 
         const auto secret = load_secret(secret_path, *vault_key);
         if (!secret) {
-            return VAULT_SECRET_LOAD_ERROR;
+            secure_cout << i << ". " << secret_path.filename() << ": corrupted entry" << std::endl;
+            continue;
         }
 
         secure_cout << i << ". " << CYAN << secret->name << RESET << std::endl;
