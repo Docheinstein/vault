@@ -66,21 +66,23 @@ VaultCommandResult command_init(int argc, char** argv) {
         if (read_yes_no_with_prompt("Initialize git repository? [Y/n] ", true)) {
             const std::string git_remote_url = read_line_with_prompt("URL: ");
 
-            int git_retcode = vault_git_init(vault_path, git_remote_url);
+            const int git_retcode = vault_git_init(vault_path, git_remote_url);
             if (git_retcode != VAULT_SUCCESS) {
                 return {git_retcode, get_git_error()};
             }
+        }
+    }
 
-            // Add and commit the vault master file.
-            git_retcode = vault_git_add(vault_path, vault_master_file_path);
-            if (git_retcode != VAULT_SUCCESS) {
-                return {git_retcode, get_git_error()};
-            }
+    if (has_git_repository(vault_path)) {
+        // Add and commit the vault master file.
+        int git_retcode = vault_git_add(vault_path, vault_master_file_path);
+        if (git_retcode != VAULT_SUCCESS) {
+            return {git_retcode, get_git_error()};
+        }
 
-            git_retcode = vault_git_commit(vault_path, "Initialize vault");
-            if (git_retcode != VAULT_SUCCESS) {
-                return {git_retcode, get_git_error()};
-            }
+        git_retcode = vault_git_commit(vault_path, "Initialize vault");
+        if (git_retcode != VAULT_SUCCESS) {
+            return {git_retcode, get_git_error()};
         }
     }
 #endif
