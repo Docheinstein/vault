@@ -42,7 +42,7 @@ if (ENABLE_GIT)
     set(USE_BUNDLED_ZLIB ON)
 
     find_package(OpenSSL REQUIRED)
-    add_subdirectory(libgit2)
+    add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
 
     add_library(libgit2_deps INTERFACE)
     target_include_directories(libgit2_deps INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/libgit2/include)

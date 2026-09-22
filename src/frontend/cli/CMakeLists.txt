@@ -61,3 +61,5 @@ target_include_directories(vault-cli PUBLIC .)
 target_link_libraries(vault-cli PRIVATE vault args)
 
 set_target_properties(vault-cli PROPERTIES OUTPUT_NAME vault)
+
+install(TARGETS vault-cli)
