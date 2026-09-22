@@ -39,8 +39,8 @@ const unsigned char* search_string_case_insensitive(const unsigned char* haystac
     return nullptr;
 }
 
-void print_highlight_match_case_insensitive(const unsigned char* haystack, const size_t haystack_len,
-                                            const unsigned char* needle, const size_t needle_len) {
+void print_secret_content_highlight_match_case_insensitive(const unsigned char* haystack, const size_t haystack_len,
+                                                           const unsigned char* needle, const size_t needle_len) {
     const unsigned char* remaining_haystack = haystack;
     size_t remaining_len = haystack_len;
 
@@ -63,6 +63,76 @@ void print_highlight_match_case_insensitive(const unsigned char* haystack, const
     } while (substr_match);
 }
 
+void print_secret_name_highlight_match_case_insensitive(const unsigned char* haystack, const size_t haystack_len,
+                                                        const unsigned char* needle, const size_t needle_len) {
+
+    // Pretty print the secret name, but highlight with red any matching substring.
+    const unsigned char* remaining_haystack = haystack;
+    size_t remaining_len = haystack_len;
+
+    secure_cout << BOLD;
+    secure_cout << CYAN;
+
+    bool bold = true;
+    bool cyan = true;
+    bool yellow = false;
+
+    const unsigned char* substr_match = nullptr;
+
+    bool separator_found = false;
+
+    const auto print_secret_name_data = [&separator_found, &bold, &cyan, &yellow](const unsigned char* data,
+                                                                                  size_t size) {
+        for (uint32_t i = 0; i < size; ++i) {
+            const unsigned char c = data[i];
+            bool separator = !separator_found && c == '/';
+
+            if (separator) {
+                secure_cout << RESET;
+                bold = cyan = yellow = false;
+            }
+
+            secure_cout << c;
+
+            if (separator) {
+                secure_cout << YELLOW;
+                yellow = true;
+            }
+
+            separator_found = separator_found || separator;
+        }
+    };
+
+    do {
+        substr_match = search_string_case_insensitive(remaining_haystack, remaining_len, needle, needle_len);
+
+        if (!substr_match) {
+            print_secret_name_data(remaining_haystack, remaining_len);
+        } else {
+            print_secret_name_data(remaining_haystack, substr_match - remaining_haystack);
+
+            secure_cout << BOLD << RED;
+
+            print_secret_name_data(substr_match, needle_len);
+            secure_cout << RESET;
+            if (bold) {
+                secure_cout << BOLD;
+            }
+            if (cyan) {
+                secure_cout << CYAN;
+            } else if (yellow) {
+                secure_cout << YELLOW;
+            }
+
+            remaining_len = remaining_len - (substr_match - remaining_haystack) - needle_len;
+            remaining_haystack = substr_match + needle_len;
+        }
+    } while (substr_match);
+
+    if (bold || cyan || yellow) {
+        secure_cout << RESET;
+    }
+}
 } // namespace
 
 VaultCommandResult command_search(int argc, char** argv) {
@@ -101,22 +171,14 @@ VaultCommandResult command_search(int argc, char** argv) {
         return VAULT_INVALID_SEARCH_PATTERN_ERROR;
     }
 
-    const std::vector<std::string> secrets_paths = get_vault_secrets(vault_path);
+    const auto secrets = load_identified_vault_secrets(vault_path, *vault_key, true);
 
     bool first_matching_secret = true;
 
-    for (uint32_t i = 0; i < secrets_paths.size(); i++) {
-        const auto& secret_path = secrets_paths[i];
-
-        const auto secret = load_secret(secret_path, *vault_key);
-        if (!secret) {
-            // Silently skip corrupted entries.
-            continue;
-        }
-
-        if (search_string_case_insensitive(secret->name.data(), secret->name.size(), search_pattern_data,
+    for (const auto& [identifier, secret] : secrets) {
+        if (search_string_case_insensitive(secret.name.data(), secret.name.size(), search_pattern_data,
                                            search_pattern.size()) ||
-            search_string_case_insensitive(secret->content.data(), secret->content.size(), search_pattern_data,
+            search_string_case_insensitive(secret.content.data(), secret.content.size(), search_pattern_data,
                                            search_pattern.size())) {
             if (!first_matching_secret) {
                 secure_cout << std::endl;
@@ -124,14 +186,14 @@ VaultCommandResult command_search(int argc, char** argv) {
 
             first_matching_secret = false;
 
-            secure_cout << i << ". " << std::flush;
+            secure_cout << identifier << " " << std::flush;
 
-            print_highlight_match_case_insensitive(secret->name.data(), secret->name.size(), search_pattern_data,
-                                                   search_pattern.size());
+            print_secret_name_highlight_match_case_insensitive(secret.name.data(), secret.name.size(),
+                                                               search_pattern_data, search_pattern.size());
             secure_cout << std::endl;
 
-            print_highlight_match_case_insensitive(secret->content.data(), secret->content.size(), search_pattern_data,
-                                                   search_pattern.size());
+            print_secret_content_highlight_match_case_insensitive(secret.content.data(), secret.content.size(),
+                                                                  search_pattern_data, search_pattern.size());
             secure_cout << std::endl;
         }
     }

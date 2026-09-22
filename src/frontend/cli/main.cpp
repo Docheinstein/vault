@@ -88,33 +88,33 @@ int main(int argc, char** argv) {
 
     VaultCommandResult result = VAULT_UNRECOGNIZED_COMMAND;
 
-    if (command == "add") {
+    if (command == "add" || command == "a") {
         result = command_add(cmd_argc, cmd_argv);
     }
 #ifdef ENABLE_GIT
-    else if (command == "clone") {
+    else if (command == "clone" || command == "c") {
         result = command_clone(cmd_argc, cmd_argv);
     }
 #endif
-    else if (command == "edit") {
+    else if (command == "edit" || command == "e") {
         result = command_edit(cmd_argc, cmd_argv);
-    } else if (command == "init") {
+    } else if (command == "init" || command == "i") {
         result = command_init(cmd_argc, cmd_argv);
-    } else if (command == "list") {
+    } else if (command == "list" || command == "l" || command == "ls") {
         result = command_list(cmd_argc, cmd_argv);
     }
 #ifdef ENABLE_GIT
-    else if (command == "pull") {
+    else if (command == "pull" || command == "p") {
         result = command_pull(cmd_argc, cmd_argv);
-    } else if (command == "push") {
+    } else if (command == "push" || command == "u") {
         result = command_push(cmd_argc, cmd_argv);
     }
 #endif
-    else if (command == "remove") {
+    else if (command == "remove" || command == "rm" || command == "r") {
         result = command_remove(cmd_argc, cmd_argv);
-    } else if (command == "search") {
+    } else if (command == "search" || command == "grep" || command == "g") {
         result = command_search(cmd_argc, cmd_argv);
-    } else if (command == "show") {
+    } else if (command == "show" || command == "s") {
         result = command_show(cmd_argc, cmd_argv);
     }
 

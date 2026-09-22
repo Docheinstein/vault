@@ -9,6 +9,7 @@
 #include "vault/vault/vault.h"
 
 #include "utils/cli.h"
+#include "utils/ui.h"
 #include "utils/vault.h"
 
 #ifdef ENABLE_GIT
@@ -67,6 +68,9 @@ VaultCommandResult command_edit(int argc, char** argv) {
         return VAULT_SECRET_LOAD_ERROR;
     }
 
+    secure_cout << std::endl << *args.id << " " << get_secret_colorized_name(secret->name) << std::endl;
+    secure_cout << secret->content << std::endl << std::endl;
+
     if (args.multiline) {
         auto secret_content = read_multiline_with_prompt_secure("Enter content and press Ctrl+D when finished\n");
         if (!secret_content) {
@@ -74,12 +78,12 @@ VaultCommandResult command_edit(int argc, char** argv) {
         }
         secret->content = std::move(*secret_content);
     } else {
-        auto secret_content = read_hidden_line_with_prompt_secure("Enter password: ");
+        auto secret_content = read_hidden_line_with_prompt_secure("Enter new password: ");
         if (!secret_content) {
             return VAULT_STDIN_ERROR;
         }
 
-        const auto secret_content_again = read_hidden_line_with_prompt_secure("Retype password: ");
+        const auto secret_content_again = read_hidden_line_with_prompt_secure("Retype new password: ");
         if (!secret_content_again) {
             return VAULT_STDIN_ERROR;
         }
