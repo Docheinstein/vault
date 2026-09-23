@@ -37,9 +37,11 @@ if (ENABLE_GIT)
     set(BUILD_EXAMPLES OFF CACHE BOOL   "Build library usage example apps" FORCE)
     set(BUILD_FUZZERS OFF CACHE BOOL   "Build the fuzz targets" FORCE)
 
-    set(USE_HTTPS OpenSSL)
-    set(USE_SSH exec) # requires ssh at runtime
-    set(USE_BUNDLED_ZLIB ON)
+    # Must be cache variables: libgit2 uses an old policy version, so plain variables are overridden by its
+    # CACHE/option() defaults on a fresh configure
+    set(USE_HTTPS OpenSSL CACHE STRING "Enable HTTPS support and optionally selects the provider" FORCE)
+    set(USE_SSH exec CACHE STRING "Enables SSH support and optionally selects provider" FORCE) # requires ssh at runtime
+    set(USE_BUNDLED_ZLIB ON CACHE BOOL "Use the bundled version of zlib" FORCE)
 
     find_package(OpenSSL REQUIRED)
     add_subdirectory(libgit2 EXCLUDE_FROM_ALL)
