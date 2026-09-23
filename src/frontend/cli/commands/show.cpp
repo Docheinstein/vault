@@ -1,6 +1,7 @@
 #include "commands/show.h"
 
 #include <optional>
+#include <sstream>
 #include <string>
 
 #include "args/args.h"

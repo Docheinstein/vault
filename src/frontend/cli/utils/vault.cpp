@@ -1,5 +1,6 @@
 #include "utils/vault.h"
 
+#include <algorithm>
 #include <unordered_set>
 
 #include "vault/vault/secret.h"
@@ -112,15 +113,14 @@ load_identified_vault_secrets(const std::filesystem::path& vault_path, const Vau
 
     // Eventually sort them.
     if (sort_by_name) {
-        std::sort(identified_secrets.begin(), identified_secrets.end(),
-                  [](const std::pair<std::string, Secret>& lhs, const std::pair<std::string, Secret>& rhs) {
-                      const Secret& lhs_secret = lhs.second;
-                      const Secret& rhs_secret = rhs.second;
-                      return std::lexicographical_compare(
-                          lhs_secret.name.data(), lhs_secret.name.data() + lhs_secret.name.size(),
-                          rhs_secret.name.data(), rhs_secret.name.data() + rhs_secret.name.size(),
-                          compare_char_case_insensitive);
-                  });
+        std::ranges::sort(identified_secrets, [](const std::pair<std::string, Secret>& lhs,
+                                                 const std::pair<std::string, Secret>& rhs) {
+            const Secret& lhs_secret = lhs.second;
+            const Secret& rhs_secret = rhs.second;
+            return std::lexicographical_compare(lhs_secret.name.data(), lhs_secret.name.data() + lhs_secret.name.size(),
+                                                rhs_secret.name.data(), rhs_secret.name.data() + rhs_secret.name.size(),
+                                                compare_char_case_insensitive);
+        });
     }
 
     return identified_secrets;
