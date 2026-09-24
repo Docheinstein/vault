@@ -3,6 +3,10 @@ project(vault)
 
 set(CMAKE_CXX_STANDARD 23)
 
+if (NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type: options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
